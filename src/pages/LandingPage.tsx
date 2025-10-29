@@ -17,23 +17,19 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
     { icon: FileText, title: 'Exportação Multi-formato', description: 'PDF, Mermaid e mais' },
   ];
 
-  const pricingPlans = [
+  const pricingOptions = [
     {
-      name: 'Gratuito',
-      price: 'R$ 0',
-      features: ['3 POPs por mês', 'Templates básicos', 'Exportar PDF'],
-      popular: false,
-    },
-    {
-      name: 'Básico',
-      price: 'R$ 97',
-      features: ['15 POPs por mês', 'Sem marca MP', 'Cores personalizadas', 'Templates ISO 9001'],
+      name: 'À Vista',
+      price: 'R$ 997',
+      subtitle: '+ R$ 37/mês',
+      features: ['Pagamento inicial único', 'Manutenção mensal baixa', 'Todos os recursos incluídos'],
       popular: true,
     },
     {
-      name: 'Profissional',
-      price: 'R$ 297',
-      features: ['50 POPs por mês', 'Logo + cores', 'Templates completos', 'Suporte prioritário'],
+      name: 'Parcelado',
+      price: '12x R$ 120',
+      subtitle: 'Renovação anual',
+      features: ['Sem pagamento inicial', 'Renovação automática', 'Todos os recursos incluídos'],
       popular: false,
     },
   ];
@@ -202,35 +198,35 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
       <section id="precos" className="bg-white py-20">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
-            <h2 className="text-[#1e293b] mb-4">Escolha Seu Plano</h2>
-            <p className="text-lg text-[#64748b]">Comece grátis, faça upgrade quando precisar</p>
+            <h2 className="text-[#1e293b] mb-4">Plano Único, Duas Formas de Pagamento</h2>
+            <p className="text-lg text-[#64748b]">Escolha a opção que melhor se adapta ao seu negócio</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {pricingPlans.map((plan, i) => (
-              <Card key={i} className={`p-8 ${plan.popular ? 'border-[#2563eb] border-2 shadow-lg' : ''}`}>
-                {plan.popular && (
-                  <Badge className="mb-4 bg-[#2563eb]">Mais Popular</Badge>
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {pricingOptions.map((option, i) => (
+              <Card key={i} className={`p-8 ${option.popular ? 'border-[#2563eb] border-2 shadow-lg' : ''}`}>
+                {option.popular && (
+                  <Badge className="mb-4 bg-[#2563eb]">Recomendado</Badge>
                 )}
-                <h3 className="text-[#1e293b] mb-2">{plan.name}</h3>
-                <div className="mb-6">
-                  <span className="text-[#1e293b]">{plan.price}</span>
-                  {plan.price !== 'R$ 0' && <span className="text-[#64748b]">/mês</span>}
+                <h3 className="text-[#1e293b] mb-2">{option.name}</h3>
+                <div className="mb-2">
+                  <span className="text-[#1e293b]">{option.price}</span>
                 </div>
+                <p className="text-sm text-[#64748b] mb-6">{option.subtitle}</p>
                 <ul className="space-y-3 mb-8">
-                  {plan.features.map((feature, j) => (
+                  {option.features.map((feature, j) => (
                     <li key={j} className="flex items-start gap-2 text-[#64748b]">
                       <Check className="h-5 w-5 text-[#10b981] flex-shrink-0 mt-0.5" />
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
-                <Button 
+                <Button
                   className="w-full"
-                  variant={plan.popular ? 'default' : 'outline'}
-                  onClick={() => onNavigate('/register')}
+                  variant={option.popular ? 'default' : 'outline'}
+                  onClick={() => onNavigate('/pricing')}
                 >
-                  {plan.price === 'R$ 0' ? 'Começar Grátis' : 'Assinar Agora'}
+                  Assinar Agora
                 </Button>
               </Card>
             ))}
@@ -238,7 +234,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
 
           <div className="text-center mt-8">
             <Button variant="link" onClick={() => onNavigate('/pricing')}>
-              Ver comparação completa de planos →
+              Ver todos os recursos incluídos →
             </Button>
           </div>
         </div>

@@ -201,7 +201,7 @@ export default function App() {
             currentPath={currentRoute}
             onNavigate={navigate}
             processCount={processes.length}
-            maxProcesses={user.plan === 'free' ? 3 : user.plan === 'basic' ? 15 : user.plan === 'professional' ? 50 : 999}
+            maxProcesses={999}
           />
           <main className="flex-1 p-8">
             {children}

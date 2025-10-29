@@ -3,7 +3,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  plan: 'free' | 'basic' | 'professional' | 'enterprise';
+  plan: 'upfront' | 'installments'; // Forma de pagamento escolhida
   company?: string;
   avatar?: string;
   onboardingCompleted?: boolean;
