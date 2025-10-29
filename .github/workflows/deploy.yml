@@ -3,7 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - claude/simplify-payment-plans-011CUbpU1nBf7tSmjrVM5Cwy
+      - claude/main-011CUbpU1nBf7tSmjrVM5Cwy
+      - main
 
 permissions:
   contents: read
