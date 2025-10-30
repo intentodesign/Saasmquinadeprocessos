@@ -53,6 +53,7 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
                 alt="Logo Máquina de Processos"
                 className="h-8 w-auto"
               />
+              <span className="text-[#1e293b] font-semibold text-lg">Máquina de Processos</span>
             </div>
 
             <nav className="hidden md:flex items-center gap-6 text-sm">

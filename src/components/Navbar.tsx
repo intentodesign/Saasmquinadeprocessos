@@ -42,6 +42,7 @@ export function Navbar({ user, onNavigate, onLogout }: NavbarProps) {
               alt="Logo"
               className="h-8 w-auto"
             />
+            <span className="text-[#1e293b] font-semibold text-lg">Máquina de Processos</span>
           </button>
         </div>
 

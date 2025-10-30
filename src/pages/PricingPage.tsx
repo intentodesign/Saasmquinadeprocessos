@@ -17,24 +17,27 @@ interface PricingPageProps {
 }
 
 export function PricingPage({ user, onNavigate }: PricingPageProps) {
-  const [paymentOption, setPaymentOption] = useState<'upfront' | 'installments'>('upfront');
-
   const pricingOptions = [
     {
-      type: 'upfront',
-      name: 'Pagamento à Vista',
-      initialPayment: 'R$ 997',
-      maintenanceFee: 'R$ 37/mês',
-      description: 'Pagamento inicial + manutenção mensal',
-      highlight: true,
+      name: 'Essencial',
+      price: 'R$ 667',
+      subtitle: 'anual',
+      features: ['Até 20 processos documentados', 'Exportação PDF básica', 'Fluxogramas visuais', 'Suporte por email'],
+      popular: false,
     },
     {
-      type: 'installments',
-      name: 'Parcelado',
-      monthlyPayment: 'R$ 120',
-      installments: '12x',
-      description: 'Renovação anual automática',
-      highlight: false,
+      name: 'Profissional',
+      price: 'R$ 997',
+      subtitle: 'anual',
+      features: ['Processos ilimitados', 'White Label completo', 'Exportação multi-formato', 'IA Rô Bot incluída', 'Suporte prioritário', 'Versionamento automático'],
+      popular: true,
+    },
+    {
+      name: 'Enterprise',
+      price: 'R$ 1.497',
+      subtitle: 'anual',
+      features: ['Tudo do Profissional', 'Treinamento personalizado (1h)', 'API de integração', 'Gerente de conta dedicado'],
+      popular: false,
     },
   ];
 
@@ -85,73 +88,39 @@ export function PricingPage({ user, onNavigate }: PricingPageProps) {
     <div className="space-y-12 pb-12">
       {/* Header */}
       <div className="text-center space-y-4">
-        <h1 className="text-[#1e293b]">Plano Único com Todos os Recursos</h1>
+        <h1 className="text-[#1e293b]">Plano Único, Duas Formas de Pagamento</h1>
         <p className="text-lg text-[#64748b]">
-          Escolha a forma de pagamento que melhor se adapta ao seu negócio
+          Escolha a opção que melhor se adapta ao seu negócio
         </p>
       </div>
 
       {/* Pricing Options */}
-      <div className="max-w-5xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
           {pricingOptions.map((option, index) => (
-            <Card
-              key={index}
-              className={`p-8 flex flex-col cursor-pointer transition-all ${
-                paymentOption === option.type
-                  ? 'border-2 border-[#2563eb] shadow-lg'
-                  : 'hover:shadow-md'
-              }`}
-              onClick={() => setPaymentOption(option.type as 'upfront' | 'installments')}
-            >
-              {option.highlight && (
-                <Badge className="mb-4 bg-[#2563eb] w-fit">
-                  Recomendado
-                </Badge>
+            <Card key={index} className={`p-8 ${option.popular ? 'border-[#2563eb] border-2 shadow-lg' : ''}`}>
+              {option.popular && (
+                <Badge className="mb-4 bg-[#2563eb]">Mais Escolhido</Badge>
               )}
-
-              <div className="mb-6">
-                <h3 className="text-[#1e293b] mb-2">{option.name}</h3>
-                <p className="text-sm text-[#64748b]">{option.description}</p>
+              <h3 className="text-[#1e293b] mb-2">{option.name}</h3>
+              <div className="mb-2">
+                <span className="text-[#1e293b]">{option.price}</span>
               </div>
-
-              <div className="mb-6">
-                {option.type === 'upfront' ? (
-                  <div className="space-y-2">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-[#1e293b]">{option.initialPayment}</span>
-                      <span className="text-sm text-[#64748b]">pagamento inicial</span>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl text-[#1e293b]">+</span>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-[#1e293b]">{option.maintenanceFee}</span>
-                      <span className="text-sm text-[#64748b]">manutenção</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-sm text-[#64748b]">{option.installments} de</span>
-                    <span className="text-[#1e293b]">{option.monthlyPayment}</span>
-                    <span className="text-sm text-[#64748b]">/mês</span>
-                  </div>
-                )}
-              </div>
-
+              <p className="text-sm text-[#64748b] mb-6">{option.subtitle}</p>
+              <ul className="space-y-3 mb-8">
+                {option.features.map((feature, j) => (
+                  <li key={j} className="flex items-start gap-2 text-[#64748b]">
+                    <Check className="h-5 w-5 text-[#10b981] flex-shrink-0 mt-0.5" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
               <Button
-                className={`w-full ${
-                  paymentOption === option.type
-                    ? 'bg-[#2563eb] hover:bg-[#1d4ed8]'
-                    : ''
-                }`}
-                variant={paymentOption === option.type ? 'default' : 'outline'}
-                onClick={() => {
-                  setPaymentOption(option.type as 'upfront' | 'installments');
-                  alert(`Assinar com ${option.name}...`);
-                }}
+                className="w-full"
+                variant={option.popular ? 'default' : 'outline'}
+                onClick={() => onNavigate('/pricing')}
               >
-                {paymentOption === option.type ? 'Selecionado' : 'Escolher este plano'}
+                Assinar Agora
               </Button>
             </Card>
           ))}
