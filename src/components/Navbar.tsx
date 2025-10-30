@@ -38,11 +38,10 @@ export function Navbar({ user, onNavigate, onLogout }: NavbarProps) {
             className="flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <img
-              src="/favicon.svg"
+              src="/logo.svg"
               alt="Logo"
-              className="w-8 h-8 rounded-lg"
+              className="h-8 w-auto"
             />
-            <span className="text-[#1e293b]">Máquina de Processos</span>
           </button>
         </div>
 

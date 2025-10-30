@@ -19,17 +19,24 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
 
   const pricingOptions = [
     {
-      name: 'À Vista',
+      name: 'Essencial',
+      price: 'R$ 667',
+      subtitle: 'anual',
+      features: ['Até 20 processos documentados', 'Exportação PDF básica', 'Fluxogramas visuais', 'Suporte por email'],
+      popular: false,
+    },
+    {
+      name: 'Profissional',
       price: 'R$ 997',
-      subtitle: '+ R$ 37/mês',
-      features: ['Pagamento inicial único', 'Manutenção mensal baixa', 'Todos os recursos incluídos'],
+      subtitle: 'anual',
+      features: ['Processos ilimitados', 'White Label completo', 'Exportação multi-formato', 'IA Rô Bot incluída', 'Suporte prioritário', 'Versionamento automático'],
       popular: true,
     },
     {
-      name: 'Parcelado',
-      price: '12x R$ 120',
-      subtitle: 'Renovação anual',
-      features: ['Sem pagamento inicial', 'Renovação automática', 'Todos os recursos incluídos'],
+      name: 'Enterprise',
+      price: 'R$ 1.497',
+      subtitle: 'anual',
+      features: ['Tudo do Profissional', 'Treinamento personalizado (1h)', 'API de integração', 'Gerente de conta dedicado'],
       popular: false,
     },
   ];
@@ -42,11 +49,10 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <img
-                src="/favicon.svg"
+                src="/logo.svg"
                 alt="Logo Máquina de Processos"
-                className="w-8 h-8 rounded-lg"
+                className="h-8 w-auto"
               />
-              <span className="text-[#1e293b]">Máquina de Processos</span>
             </div>
 
             <nav className="hidden md:flex items-center gap-6 text-sm">
@@ -200,11 +206,11 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
             <p className="text-lg text-[#64748b]">Escolha a opção que melhor se adapta ao seu negócio</p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {pricingOptions.map((option, i) => (
               <Card key={i} className={`p-8 ${option.popular ? 'border-[#2563eb] border-2 shadow-lg' : ''}`}>
                 {option.popular && (
-                  <Badge className="mb-4 bg-[#2563eb]">Recomendado</Badge>
+                  <Badge className="mb-4 bg-[#2563eb]">Mais Escolhido</Badge>
                 )}
                 <h3 className="text-[#1e293b] mb-2">{option.name}</h3>
                 <div className="mb-2">
