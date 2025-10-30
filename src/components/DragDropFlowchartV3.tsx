@@ -18,6 +18,7 @@ import ReactFlow, {
   EdgeChange,
   Handle,
   Position,
+  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { ProcessStep, StepType } from '../lib/types';
@@ -86,7 +87,8 @@ const STEP_CONFIG = {
 };
 
 // Custom Node Component - LIMPO E SIMPLES
-function FlowNode({ data, selected }: { data: any; selected: boolean }) {
+function FlowNode({ data, selected, id }: { data: any; selected: boolean; id: string }) {
+  const { setNodes, setEdges } = useReactFlow();
   const isStartEnd = data.isStartEnd;
   const stepType: StepType = data.stepType || 'process';
   const config = STEP_CONFIG[stepType];
@@ -96,6 +98,10 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
   const borderColor = selected ? COLORS.selected : baseColor;
   const borderWidth = selected ? 3 : 1.5;
 
+  const handleDelete = useCallback(() => {
+    setNodes((nds) => nds.filter((n) => n.id !== id));
+    setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+  }, [id, setNodes, setEdges]);
 
   // Renderiza forma baseada no tipo
   const renderShape = () => {
@@ -206,6 +212,17 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
         >
           {data.stepIndex + 1}
         </div>
+      )}
+
+      {/* Botão de deletar - só aparece quando selecionado */}
+      {selected && !isStartEnd && (
+        <button
+          onClick={handleDelete}
+          className="absolute -top-2 -left-2 w-6 h-6 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600 transition-colors shadow-md z-10"
+          title="Deletar etapa (ou pressione Delete)"
+        >
+          <Trash2 className="h-3 w-3 text-white" />
+        </button>
       )}
     </div>
   );
