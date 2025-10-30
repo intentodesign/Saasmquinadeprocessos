@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bot, User, ArrowLeft, Loader2 } from 'lucide-react';
+import { Bot, User, ArrowLeft, Loader2, Send } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Textarea } from '../components/ui/textarea';
 import { Card } from '../components/ui/card';
-import { Avatar, AvatarFallback } from '../components/ui/avatar';
-import { Progress } from '../components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Process, ProcessStep } from '../lib/types';
 import { generateId } from '../lib/utils';
 
@@ -18,24 +16,18 @@ type Message = {
   id: string;
   type: 'bot' | 'user';
   content: string;
-  options?: string[];
   isTyping?: boolean;
 };
+
+const N8N_WEBHOOK_URL = 'https://n8n.intentomarcas.com.br/webhook/process-chat';
 
 export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcessPageProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentInput, setCurrentInput] = useState('');
-  const [step, setStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    category: '',
-    steps: '',
-    responsible: '',
-    equipment: '',
-    safety: '',
-    standards: '',
-  });
+  const [sessionId, setSessionId] = useState<string>('');
+  const [processComplete, setProcessComplete] = useState(false);
+  const [processData, setProcessData] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -47,22 +39,19 @@ export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcess
   }, [messages]);
 
   useEffect(() => {
-    // Initial message
+    // Generate unique session ID
+    const newSessionId = `session_${generateId()}`;
+    setSessionId(newSessionId);
+
+    // Get initial greeting from N8N
     setTimeout(() => {
-      addBotMessage('Olá! Vou te ajudar a criar um Procedimento Operacional Padrão. Qual o nome do processo que você quer documentar?');
+      sendMessageToN8N('__START__', newSessionId);
     }, 500);
   }, []);
 
-  const addBotMessage = (content: string, options?: string[]) => {
+  const addBotMessage = (content: string) => {
     const id = generateId();
-    setMessages(prev => [...prev, { id: `typing-${id}`, type: 'bot', content: '...', isTyping: true }]);
-    
-    setTimeout(() => {
-      setMessages(prev => {
-        const filtered = prev.filter(m => !m.isTyping);
-        return [...filtered, { id, type: 'bot', content, options }];
-      });
-    }, 800);
+    setMessages(prev => [...prev, { id, type: 'bot', content, isTyping: false }]);
   };
 
   const addUserMessage = (content: string) => {
@@ -70,127 +59,99 @@ export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcess
     setMessages(prev => [...prev, { id, type: 'user', content }]);
   };
 
-  const handleCategoryClick = (category: string) => {
-    const categoryMap: Record<string, string> = {
-      'Manutenção': 'maintenance',
-      'Atendimento': 'service',
-      'Administrativo': 'administrative',
-      'Outro': 'other',
-    };
-    
-    handleSubmit(category, categoryMap[category]);
+  const addTypingIndicator = () => {
+    const id = generateId();
+    setMessages(prev => [...prev, { id: `typing-${id}`, type: 'bot', content: '...', isTyping: true }]);
   };
 
-  const handleSubmit = (value?: string, categoryValue?: string) => {
-    const inputValue = value || currentInput.trim();
-    if (!inputValue && step !== 8) return;
+  const removeTypingIndicator = () => {
+    setMessages(prev => prev.filter(m => !m.isTyping));
+  };
 
-    addUserMessage(inputValue);
-    setCurrentInput('');
+  const sendMessageToN8N = async (message: string, sid?: string) => {
+    try {
+      setIsLoading(true);
 
-    // Process steps
-    switch (step) {
-      case 0: // Name
-        setFormData(prev => ({ ...prev, name: inputValue }));
-        setStep(1);
-        setTimeout(() => {
-          addBotMessage('Ótimo! Este processo pertence a qual categoria?', [
-            'Manutenção',
-            'Atendimento',
-            'Administrativo',
-            'Outro'
-          ]);
-        }, 1000);
-        break;
+      // Add typing indicator
+      if (message !== '__START__') {
+        addTypingIndicator();
+      }
 
-      case 1: // Category
-        setFormData(prev => ({ ...prev, category: categoryValue || 'other' }));
-        setStep(2);
-        setTimeout(() => {
-          addBotMessage('Agora me conta: quais são as etapas principais deste processo? Pode listar uma por linha.');
-        }, 1000);
-        break;
+      const response = await fetch(N8N_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message,
+          sessionId: sid || sessionId,
+        }),
+      });
 
-      case 2: // Steps
-        setFormData(prev => ({ ...prev, steps: inputValue }));
-        setStep(3);
-        setTimeout(() => {
-          addBotMessage('Perfeito! Quem é o responsável por executar este processo?');
-        }, 1000);
-        break;
+      const data = await response.json();
 
-      case 3: // Responsible
-        setFormData(prev => ({ ...prev, responsible: inputValue }));
-        setStep(4);
-        setTimeout(() => {
-          addBotMessage('Precisa de algum equipamento ou ferramenta especial? (Digite "não" se não precisar)');
-        }, 1000);
-        break;
+      removeTypingIndicator();
 
-      case 4: // Equipment
-        setFormData(prev => ({ ...prev, equipment: inputValue }));
-        setStep(5);
-        setTimeout(() => {
-          addBotMessage('Existe algum requisito de segurança importante? (Digite "não" se não houver)');
-        }, 1000);
-        break;
+      if (data.success) {
+        // Add bot response
+        addBotMessage(data.message);
 
-      case 5: // Safety
-        setFormData(prev => ({ ...prev, safety: inputValue }));
-        setStep(6);
-        setTimeout(() => {
-          addBotMessage('Por último: este processo tem alguma norma específica que precisa seguir? (ex: ISO 9001, NR-12) Digite "não" se não houver.');
-        }, 1000);
-        break;
-
-      case 6: // Standards
-        setFormData(prev => ({ ...prev, standards: inputValue }));
-        setStep(7);
-        setIsLoading(true);
-        setTimeout(() => {
-          addBotMessage('Incrível! Agora vou gerar seu POP. Isso leva uns 10 segundos... ⏳');
-        }, 1000);
-        
-        // Simulate AI generation
-        setTimeout(() => {
-          setIsLoading(false);
-          setStep(8);
-          addBotMessage(`✓ Pronto! Seu SOP "${formData.name}" foi criado. Vamos visualizar?`);
-        }, 3000);
-        break;
-
-      case 8: // Complete
-        createProcess();
-        break;
+        // Check if process is complete
+        if (data.complete && data.process) {
+          setProcessComplete(true);
+          setProcessData(data.process);
+        }
+      } else {
+        addBotMessage('Desculpe, ocorreu um erro. Pode tentar novamente?');
+      }
+    } catch (error) {
+      console.error('Error calling N8N:', error);
+      removeTypingIndicator();
+      addBotMessage('Ops! Tive um problema de conexão. Pode tentar novamente?');
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+
+    const inputValue = currentInput.trim();
+    if (!inputValue || isLoading) return;
+
+    // Add user message to UI
+    addUserMessage(inputValue);
+    setCurrentInput('');
+
+    // Send to N8N
+    await sendMessageToN8N(inputValue);
+  };
+
   const createProcess = () => {
-    const stepsList = formData.steps
-      .split('\n')
-      .filter(s => s.trim())
-      .map((stepText, index): ProcessStep => ({
-        id: generateId(),
-        title: stepText.trim(),
-        description: `Descrição detalhada da etapa: ${stepText.trim()}`,
-        responsible: formData.responsible,
-        duration: '15 min',
-        warning: formData.safety && formData.safety.toLowerCase() !== 'não' ? formData.safety : undefined,
-        order: index + 1,
-      }));
+    if (!processData) return;
+
+    const stepsList: ProcessStep[] = processData.steps.map((step: any): ProcessStep => ({
+      id: generateId(),
+      title: step.title,
+      description: step.description,
+      responsible: step.responsible || processData.responsible,
+      duration: step.duration || '15 min',
+      warning: step.warning,
+      order: step.order,
+    }));
 
     const newProcess: Process = {
       id: generateId(),
-      name: formData.name,
-      category: formData.category as any,
+      name: processData.name,
+      category: processData.category,
       status: 'complete',
       steps: stepsList,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       version: 1,
-      tags: [],
+      tags: processData.standards || [],
       metadata: {
-        code: `POP-${formData.category.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-3)}`,
+        code: `POP-${processData.category.substring(0, 3).toUpperCase()}-${Date.now().toString().slice(-3)}`,
         revision: 'Rev. 01',
       },
     };
@@ -198,8 +159,6 @@ export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcess
     onCreateProcess(newProcess);
     onNavigate(`/process/${newProcess.id}/view`);
   };
-
-  const progress = (step / 7) * 100;
 
   return (
     <div className="min-h-screen bg-[#f8fafc] relative">
@@ -213,26 +172,15 @@ export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcess
             <ArrowLeft className="h-5 w-5" />
             <span>Sair</span>
           </button>
-          
+
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#2563eb] to-[#0ea5e9] flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-white">
-                <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" opacity="0.5"/>
-                <path d="M2 17L12 22L22 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M2 12L12 17L22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-          </div>
-        </div>
-        
-        {/* Progress Bar */}
-        <div className="px-6 pb-4">
-          <div className="max-w-3xl mx-auto">
-            <div className="flex justify-between text-xs text-[#64748b] mb-2">
-              <span>Pergunta {Math.min(step + 1, 7)} de 7</span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} className="h-1.5" />
+            <span className="text-sm text-[#64748b]">Rô Bot</span>
+            <Avatar className="h-8 w-8">
+              <AvatarImage src="/robot-avatar.png" alt="Rô Bot" />
+              <AvatarFallback className="bg-gradient-to-br from-[#2563eb] to-[#0ea5e9] text-white">
+                <Bot className="h-5 w-5" />
+              </AvatarFallback>
+            </Avatar>
           </div>
         </div>
       </div>
@@ -247,6 +195,7 @@ export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcess
             >
               {message.type === 'bot' && (
                 <Avatar className="h-10 w-10 flex-shrink-0">
+                  <AvatarImage src="/robot-avatar.png" alt="Rô Bot" />
                   <AvatarFallback className="bg-gradient-to-br from-[#2563eb] to-[#0ea5e9] text-white">
                     <Bot className="h-5 w-5" />
                   </AvatarFallback>
@@ -273,23 +222,6 @@ export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcess
                     </p>
                   )}
                 </Card>
-
-                {/* Quick Reply Options */}
-                {message.options && !message.isTyping && (
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    {message.options.map((option, index) => (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleCategoryClick(option)}
-                        className="hover:bg-[#2563eb] hover:text-white hover:border-[#2563eb]"
-                      >
-                        {option}
-                      </Button>
-                    ))}
-                  </div>
-                )}
               </div>
 
               {message.type === 'user' && (
@@ -312,14 +244,14 @@ export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcess
           )}
 
           {/* Completion Button */}
-          {step === 8 && !isLoading && (
+          {processComplete && processData && (
             <div className="flex justify-center">
               <Button
                 onClick={createProcess}
-                className="bg-[#2563eb] hover:bg-[#1d4ed8]"
+                className="bg-[#10b981] hover:bg-[#059669]"
                 size="lg"
               >
-                Ver Meu Processo
+                ✓ Ver Meu Processo
               </Button>
             </div>
           )}
@@ -329,43 +261,29 @@ export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcess
       </div>
 
       {/* Input Area */}
-      {step < 8 && !isLoading && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t">
+      {!processComplete && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
           <div className="max-w-3xl mx-auto px-6 py-4">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleSubmit();
-              }}
-              className="flex gap-3"
-            >
-              {step === 2 ? (
-                <Textarea
-                  value={currentInput}
-                  onChange={(e) => setCurrentInput(e.target.value)}
-                  placeholder="Digite cada etapa em uma linha..."
-                  className="flex-1 min-h-[80px]"
-                  autoFocus
-                />
-              ) : (
-                <Input
-                  value={currentInput}
-                  onChange={(e) => setCurrentInput(e.target.value)}
-                  placeholder="Digite sua resposta..."
-                  className="flex-1"
-                  autoFocus
-                />
-              )}
+            <form onSubmit={handleSubmit} className="flex gap-3">
+              <Input
+                value={currentInput}
+                onChange={(e) => setCurrentInput(e.target.value)}
+                placeholder={isLoading ? 'Rô Bot está digitando...' : 'Digite sua mensagem...'}
+                className="flex-1"
+                disabled={isLoading}
+                autoFocus
+              />
               <Button
                 type="submit"
                 className="bg-[#2563eb] hover:bg-[#1d4ed8]"
-                disabled={!currentInput.trim() && step !== 8}
+                disabled={!currentInput.trim() || isLoading}
+                size="icon"
               >
-                Enviar
+                <Send className="h-5 w-5" />
               </Button>
             </form>
             <p className="text-xs text-[#64748b] mt-2 text-center">
-              Pressione Enter para enviar
+              Pressione Enter para enviar • Powered by AI
             </p>
           </div>
         </div>
