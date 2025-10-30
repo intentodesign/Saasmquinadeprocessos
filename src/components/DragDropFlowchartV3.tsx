@@ -245,6 +245,7 @@ function CustomEdge({
   style = {},
   markerEnd,
   data,
+  selected,
 }: EdgeProps) {
   const { setEdges } = useReactFlow();
   const [edgePath, labelX, labelY] = getSmoothStepPath({
@@ -257,6 +258,7 @@ function CustomEdge({
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
   const [label, setLabel] = useState(data?.label || '');
   const [tempLabel, setTempLabel] = useState(label);
 
@@ -264,7 +266,8 @@ function CustomEdge({
     setEdges((edges) => edges.filter((edge) => edge.id !== id));
   };
 
-  const handleDoubleClick = () => {
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsEditing(true);
     setTempLabel(label);
   };
@@ -288,9 +291,22 @@ function CustomEdge({
     }
   };
 
+  // Mostrar label apenas se: está editando, tem texto, ou está selecionada
+  const showLabel = isEditing || label || selected;
+
   return (
     <>
-      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      {/* Linha principal - com corte onde tem o label */}
+      <BaseEdge
+        path={edgePath}
+        markerEnd={markerEnd}
+        style={{
+          ...style,
+          strokeWidth: selected ? 3 : 2,
+        }}
+      />
+
+      {/* Label interativo */}
       <EdgeLabelRenderer>
         <div
           style={{
@@ -299,35 +315,67 @@ function CustomEdge({
             pointerEvents: 'all',
           }}
           className="nodrag nopan"
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
         >
           {isEditing ? (
+            // Campo de edição
             <input
               type="text"
               value={tempLabel}
               onChange={(e) => setTempLabel(e.target.value)}
               onBlur={handleSaveLabel}
               onKeyDown={handleKeyDown}
+              placeholder="Digite o texto..."
               autoFocus
-              className="px-2 py-1 text-xs border border-blue-500 rounded bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              style={{ minWidth: '80px' }}
+              className="px-2 py-1 text-xs border-2 border-blue-500 rounded bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{ minWidth: '100px' }}
             />
-          ) : (
-            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded shadow-md border border-gray-200 group">
-              <span
-                onDoubleClick={handleDoubleClick}
-                className="text-xs font-medium cursor-pointer hover:text-blue-600"
-                title="Clique duplo para editar"
-              >
-                {label || 'Duplo clique para adicionar texto'}
-              </span>
-              <button
-                onClick={handleDelete}
-                className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-0.5 hover:bg-red-100 rounded"
-                title="Deletar conexão"
-              >
-                <X className="h-3 w-3 text-red-500" />
-              </button>
+          ) : showLabel ? (
+            // Label com fundo branco (interrompe a linha visualmente)
+            <div className="relative flex items-center gap-1">
+              {/* Fundo branco que "corta" a linha */}
+              <div
+                className="absolute inset-0 bg-white rounded"
+                style={{
+                  margin: '-4px',
+                  zIndex: -1,
+                }}
+              />
+
+              {/* Conteúdo do label */}
+              <div className="flex items-center gap-1 px-2 py-1">
+                <span
+                  onDoubleClick={handleDoubleClick}
+                  className="text-xs font-medium cursor-pointer hover:text-blue-600 select-none"
+                  title={label ? "Duplo clique para editar" : "Duplo clique para adicionar texto"}
+                >
+                  {label || (selected ? '+ Adicionar texto' : '')}
+                </span>
+
+                {/* Botão de deletar - só aparece quando selecionada */}
+                {selected && (
+                  <button
+                    onClick={handleDelete}
+                    className="p-1 hover:bg-red-100 rounded transition-colors"
+                    title="Deletar conexão"
+                  >
+                    <Trash2 className="h-3 w-3 text-red-500" />
+                  </button>
+                )}
+              </div>
             </div>
+          ) : (
+            // Área invisível para capturar duplo clique quando não tem label
+            isHovering && (
+              <div
+                onDoubleClick={handleDoubleClick}
+                className="w-6 h-6 cursor-pointer opacity-0 hover:opacity-100 flex items-center justify-center"
+                title="Duplo clique para adicionar texto"
+              >
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              </div>
+            )
           )}
         </div>
       </EdgeLabelRenderer>
@@ -375,6 +423,7 @@ export function DragDropFlowchartV3({
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
   const [editPanelOpen, setEditPanelOpen] = useState(false);
   const [editData, setEditData] = useState<EditPanelData | null>(null);
 
@@ -534,6 +583,7 @@ export function DragDropFlowchartV3({
   // Callback para seleção de nó
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedNode(node.id);
+    setSelectedEdge(null); // Limpar seleção de edge
 
     // Abrir painel de edição se não for início/fim
     if (!node.data.isStartEnd && node.id.startsWith('step-')) {
@@ -548,6 +598,20 @@ export function DragDropFlowchartV3({
       });
       setEditPanelOpen(true);
     }
+  }, []);
+
+  // Callback para seleção de edge
+  const onEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
+    setSelectedEdge(edge.id);
+    setSelectedNode(null); // Limpar seleção de node
+    setEditPanelOpen(false);
+  }, []);
+
+  // Limpar seleções ao clicar no pane
+  const onPaneClick = useCallback(() => {
+    setSelectedNode(null);
+    setSelectedEdge(null);
+    setEditPanelOpen(false);
   }, []);
 
   // Salvar edição
@@ -716,14 +780,19 @@ export function DragDropFlowchartV3({
   }, [selectedNode, handleDeleteNode]);
 
   return (
-    <div className={`${className} relative bg-white flowchart-container-v3`} style={{ height: '700px', width: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+    <div className={`${className} relative bg-white flowchart-container-v3`} style={{ height: '100vh', minHeight: '800px', width: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
       <ReactFlow
         nodes={nodes}
-        edges={edges}
+        edges={edges.map(edge => ({
+          ...edge,
+          selected: edge.id === selectedEdge,
+        }))}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
+        onEdgeClick={onEdgeClick}
+        onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
