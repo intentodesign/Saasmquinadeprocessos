@@ -1,0 +1,24 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fundo gradiente azul -->
+  <defs>
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0ea5e9;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <rect width="512" height="512" rx="128" fill="url(#blueGradient)"/>
+
+  <!-- Icon: Process/Layers -->
+  <g transform="translate(128, 128)">
+    <!-- Layer 1 (top) -->
+    <path d="M128 32L32 96L128 160L224 96L128 32Z" fill="white" opacity="0.9"/>
+
+    <!-- Layer 2 (middle) -->
+    <path d="M32 160L128 224L224 160" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+
+    <!-- Layer 3 (bottom) -->
+    <path d="M32 224L128 288L224 224" stroke="white" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+  </g>
+</svg>

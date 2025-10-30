@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DragDropFlowchart } from './DragDropFlowchart';
+import { DragDropFlowchartV2 as DragDropFlowchart } from './DragDropFlowchartV2';
 import { MermaidFlowchart } from './MermaidFlowchart';
 import { ProcessStep } from '../lib/types';
 import { Card } from './ui/card';

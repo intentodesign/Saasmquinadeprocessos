@@ -10,10 +10,13 @@ export interface User {
   tutorialCompleted?: boolean;
 }
 
+export type StepType = 'process' | 'decision' | 'io' | 'document' | 'subprocess';
+
 export interface ProcessStep {
   id: string;
   title: string;
   description: string;
+  type?: StepType; // Tipo da etapa para visualização
   responsible?: string;
   duration?: string;
   warning?: string;
