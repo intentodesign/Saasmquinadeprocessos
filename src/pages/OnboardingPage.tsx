@@ -3,9 +3,9 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Card, CardContent } from '../components/ui/card';
-import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { Send, Upload, X } from 'lucide-react';
-import robotAvatar from 'figma:asset/2eeb4f624985cd836ae1fc3c196e176d818aaa43.png';
+
+const robotAvatar = '/robot-avatar.png';
 
 interface Message {
   id: string;
