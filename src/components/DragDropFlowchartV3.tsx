@@ -96,13 +96,6 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
   const borderColor = selected ? COLORS.selected : baseColor;
   const borderWidth = selected ? 3 : 1.5;
 
-  // Handler para botão de deletar
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (data.onDelete) {
-      data.onDelete(data.nodeId);
-    }
-  };
 
   // Renderiza forma baseada no tipo
   const renderShape = () => {
@@ -214,17 +207,6 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
           {data.stepIndex + 1}
         </div>
       )}
-
-      {/* Botão de deletar (só aparece quando selecionado) */}
-      {selected && !isStartEnd && (
-        <button
-          onClick={handleDelete}
-          className="absolute -top-2 -left-2 w-6 h-6 rounded-full flex items-center justify-center bg-red-500 hover:bg-red-600 transition-colors shadow-md"
-          title="Deletar etapa"
-        >
-          <Trash2 className="h-3 w-3 text-white" />
-        </button>
-      )}
     </div>
   );
 }
@@ -318,27 +300,6 @@ export function DragDropFlowchartV3({
     }
   }, [history, historyIndex, setNodes, setEdges]);
 
-  // Callback para deletar nó direto do card
-  const handleDeleteNodeFromCard = useCallback((nodeId: string) => {
-    if (nodeId === 'start' || nodeId === 'end') return;
-
-    const updatedNodes = nodes.filter(n => n.id !== nodeId);
-    const updatedEdges = edges.filter(e => e.source !== nodeId && e.target !== nodeId);
-
-    setNodes(updatedNodes);
-    setEdges(updatedEdges);
-    saveToHistory(updatedNodes, updatedEdges);
-    setSelectedNode(null);
-    setEditPanelOpen(false);
-
-    // Atualizar steps originais
-    if (onStepsChange && nodeId.startsWith('step-')) {
-      const stepIndex = parseInt(nodeId.replace('step-', ''));
-      const updatedSteps = steps.filter((_, i) => i !== stepIndex);
-      onStepsChange(updatedSteps);
-    }
-  }, [nodes, edges, steps, setNodes, setEdges, saveToHistory, onStepsChange]);
-
   // Converter ProcessSteps para ReactFlow
   const convertStepsToFlow = useCallback((processSteps: ProcessStep[]) => {
     const flowNodes: Node[] = [];
@@ -357,7 +318,6 @@ export function DragDropFlowchartV3({
         isStartEnd: true,
         stepIndex: -1,
         nodeId: 'start',
-        onDelete: handleDeleteNodeFromCard,
       },
     });
 
@@ -380,9 +340,7 @@ export function DragDropFlowchartV3({
           stepType: stepType,
           stepIndex: index,
           nodeId: `step-${index}`,
-          onDelete: handleDeleteNodeFromCard,
         },
-        draggable: true,
       });
 
       yPosition += stepSpacing;
@@ -398,7 +356,6 @@ export function DragDropFlowchartV3({
         isStartEnd: true,
         stepIndex: -1,
         nodeId: 'end',
-        onDelete: handleDeleteNodeFromCard,
       },
     });
 
@@ -429,7 +386,7 @@ export function DragDropFlowchartV3({
     }
 
     return { nodes: flowNodes, edges: flowEdges };
-  }, [handleDeleteNodeFromCard]);
+  }, []);
 
   // Atualizar fluxo quando steps mudam
   useEffect(() => {
@@ -748,7 +705,7 @@ export function DragDropFlowchartV3({
         {/* Instruções */}
         <Panel position="bottom-left" className="m-4" style={{ zIndex: 4 }}>
           <div className="bg-blue-50 px-3 py-2 rounded-lg text-xs text-blue-700 max-w-xs border border-blue-200">
-            💡 <strong>Dica:</strong> Arraste etapas para mover. Clique para editar. Arraste das bolinhas para conectar. Clique em conexões e Delete para remover. Botão vermelho deleta etapa.
+            💡 <strong>Dica:</strong> Arraste etapas para mover. Clique para editar. Arraste das bolinhas para conectar. Selecione e pressione Delete para remover.
           </div>
         </Panel>
       </ReactFlow>
