@@ -6,6 +6,8 @@ import { Card } from '../components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import { Process, ProcessStep, User, BrandingSettings } from '../lib/types';
 import { generateId } from '../lib/utils';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface CreateProcessPageProps {
   user: User;
@@ -225,9 +227,25 @@ export function CreateProcessPage({ user, branding, onNavigate, onCreateProcess 
                       <div className="w-2 h-2 rounded-full bg-[#64748b] animate-bounce" style={{ animationDelay: '300ms' }} />
                     </div>
                   ) : (
-                    <p className={message.type === 'user' ? 'text-white' : 'text-[#1e293b]'}>
-                      {message.content}
-                    </p>
+                    <div className={`prose prose-sm max-w-none ${message.type === 'user' ? 'prose-invert' : ''}`}>
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                          ul: ({ children }) => <ul className="list-disc ml-4 mb-2">{children}</ul>,
+                          ol: ({ children }) => <ol className="list-decimal ml-4 mb-2">{children}</ol>,
+                          li: ({ children }) => <li className="mb-1">{children}</li>,
+                          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                          h1: ({ children }) => <h1 className="text-xl font-bold mb-2">{children}</h1>,
+                          h2: ({ children }) => <h2 className="text-lg font-bold mb-2">{children}</h2>,
+                          h3: ({ children }) => <h3 className="text-base font-bold mb-1">{children}</h3>,
+                          hr: () => <hr className="my-3 border-t border-gray-300" />,
+                          code: ({ children }) => <code className="bg-gray-100 px-1 rounded text-sm">{children}</code>,
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
                   )}
                 </Card>
               </div>

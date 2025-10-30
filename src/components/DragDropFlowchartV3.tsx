@@ -10,6 +10,7 @@ import ReactFlow, {
   Connection,
   addEdge,
   NodeTypes,
+  EdgeTypes,
   MarkerType,
   Panel,
   applyNodeChanges,
@@ -19,6 +20,10 @@ import ReactFlow, {
   Handle,
   Position,
   useReactFlow,
+  EdgeLabelRenderer,
+  BaseEdge,
+  getSmoothStepPath,
+  EdgeProps,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { ProcessStep, StepType } from '../lib/types';
@@ -228,8 +233,114 @@ function FlowNode({ data, selected, id }: { data: any; selected: boolean; id: st
   );
 }
 
+// Custom Edge Component - Com label editável e botão de delete
+function CustomEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style = {},
+  markerEnd,
+  data,
+}: EdgeProps) {
+  const { setEdges } = useReactFlow();
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition,
+  });
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [label, setLabel] = useState(data?.label || '');
+  const [tempLabel, setTempLabel] = useState(label);
+
+  const handleDelete = () => {
+    setEdges((edges) => edges.filter((edge) => edge.id !== id));
+  };
+
+  const handleDoubleClick = () => {
+    setIsEditing(true);
+    setTempLabel(label);
+  };
+
+  const handleSaveLabel = () => {
+    setLabel(tempLabel);
+    setEdges((edges) =>
+      edges.map((edge) =>
+        edge.id === id ? { ...edge, data: { ...edge.data, label: tempLabel } } : edge
+      )
+    );
+    setIsEditing(false);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveLabel();
+    } else if (e.key === 'Escape') {
+      setIsEditing(false);
+      setTempLabel(label);
+    }
+  };
+
+  return (
+    <>
+      <BaseEdge path={edgePath} markerEnd={markerEnd} style={style} />
+      <EdgeLabelRenderer>
+        <div
+          style={{
+            position: 'absolute',
+            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            pointerEvents: 'all',
+          }}
+          className="nodrag nopan"
+        >
+          {isEditing ? (
+            <input
+              type="text"
+              value={tempLabel}
+              onChange={(e) => setTempLabel(e.target.value)}
+              onBlur={handleSaveLabel}
+              onKeyDown={handleKeyDown}
+              autoFocus
+              className="px-2 py-1 text-xs border border-blue-500 rounded bg-white shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              style={{ minWidth: '80px' }}
+            />
+          ) : (
+            <div className="flex items-center gap-1 bg-white px-2 py-1 rounded shadow-md border border-gray-200 group">
+              <span
+                onDoubleClick={handleDoubleClick}
+                className="text-xs font-medium cursor-pointer hover:text-blue-600"
+                title="Clique duplo para editar"
+              >
+                {label || 'Duplo clique para adicionar texto'}
+              </span>
+              <button
+                onClick={handleDelete}
+                className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 p-0.5 hover:bg-red-100 rounded"
+                title="Deletar conexão"
+              >
+                <X className="h-3 w-3 text-red-500" />
+              </button>
+            </div>
+          )}
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  );
+}
+
 const nodeTypes: NodeTypes = {
   flowNode: FlowNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  custom: CustomEdge,
 };
 
 // Interface de histórico para undo/redo
@@ -387,8 +498,9 @@ export function DragDropFlowchartV3({
         id: `e-${sourceNode.id}-${targetNode.id}`,
         source: sourceNode.id,
         target: targetNode.id,
-        type: 'smoothstep',
+        type: 'custom',
         animated: true,
+        data: { label: '' },
         style: {
           stroke: color,
           strokeWidth: 2,
@@ -500,8 +612,9 @@ export function DragDropFlowchartV3({
 
       const newEdge = {
         ...params,
-        type: 'smoothstep',
+        type: 'custom',
         animated: true,
+        data: { label: '' },
         style: {
           stroke: edgeColor,
           strokeWidth: 2,
@@ -612,6 +725,7 @@ export function DragDropFlowchartV3({
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         minZoom={0.2}
         maxZoom={2}
