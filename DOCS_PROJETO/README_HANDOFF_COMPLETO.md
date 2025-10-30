@@ -2,6 +2,71 @@
 
 **Data:** 30 de Outubro de 2025
 **Desenvolvido por:** Claude (Sonnet 4.5)
+**Última atualização:** 30 de Outubro de 2025 - 18:45 UTC
+
+---
+
+## ✅ PROBLEMA DE DEPLOY RESOLVIDO (30/10/2025 18:45)
+
+### O Problema:
+- Código-fonte estava correto no GitHub (commit `c877b555`)
+- Build no servidor Digital Ocean estava **desatualizado**
+- Cache HTTP do Caddy servia versão antiga mesmo após upload
+- Usuário via interface antiga sem as correções do onboarding
+
+### A Solução (passo a passo):
+
+```bash
+# 1. Limpeza completa do build local
+cd "/c/Users/bielg/AppData/Local/Temp/Saasmquinadeprocessos"
+rm -rf build build.tar.gz
+
+# 2. Build novo e limpo
+npm run build
+
+# 3. Comprimir e enviar
+tar -czf build.tar.gz build/
+scp build.tar.gz root@157.245.227.227:/var/www/maquina-processos/
+
+# 4. Substituir no servidor
+ssh root@157.245.227.227 "cd /var/www/maquina-processos && \
+  rm -rf build && \
+  tar -xzf build.tar.gz && \
+  rm build.tar.gz"
+
+# 5. CRÍTICO: Reiniciar container do Caddy (limpa cache HTTP)
+ssh root@157.245.227.227 "docker restart n8n-docker-caddy-caddy-1"
+```
+
+### Por que `pkill -HUP caddy` não funcionou?
+- Apenas recarrega a configuração do Caddy
+- **NÃO limpa o cache HTTP** de assets estáticos
+- O restart completo do container é necessário para zerar o cache
+
+### Evidência da Correção:
+**Antes:**
+```html
+<script src="/assets/index-D7qyqbqj.js"></script>  <!-- versão antiga -->
+```
+
+**Depois:**
+```html
+<script src="/assets/index-DkVyFTt8.js"></script>  <!-- versão nova -->
+<link rel="modulepreload" href="/assets/react-vendor-Depg2-eh.js">
+<!-- Code splitting implementado corretamente -->
+```
+
+### Status Atual:
+- ✅ Site atualizado: https://maquina.intentomarcas.com.br
+- ✅ Cache limpo e servindo versão correta
+- ✅ Build com todas as melhorias do onboarding
+- ⚠️ Prompt do Rô Bot no N8N ainda precisa ser atualizado manualmente
+
+### Lições Aprendidas:
+1. **Deploy correto**: SCP manual para Digital Ocean (não GitHub Actions)
+2. **Cache do Caddy**: `pkill -HUP` não basta, precisa `docker restart`
+3. **Verificação**: Sempre comparar hash dos arquivos JS entre local e produção
+4. **Build limpo**: Apagar `build/` completamente antes de regenerar
 
 ---
 

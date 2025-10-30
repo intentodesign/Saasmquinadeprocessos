@@ -1,1 +1,6 @@
 build/
+
+# Credenciais (não commitar)
+CREDENCIAIS.md
+DOCS_PROJETO/CREDENCIAIS.md
+**/CREDENCIAIS.md

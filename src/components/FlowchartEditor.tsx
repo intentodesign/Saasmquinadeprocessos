@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DragDropFlowchartV2 as DragDropFlowchart } from './DragDropFlowchartV2';
+import { DragDropFlowchartV3 as DragDropFlowchart } from './DragDropFlowchartV3';
 import { MermaidFlowchart } from './MermaidFlowchart';
 import { ProcessStep } from '../lib/types';
 import { Card } from './ui/card';
@@ -292,10 +292,9 @@ export function FlowchartEditor({ steps, processName, onStepsChange, companyLogo
 
           <TabsContent value="interactive" className="mt-6">
             <div className="overflow-hidden shadow-xl">
-              <DragDropFlowchart 
-                steps={steps} 
+              <DragDropFlowchart
+                steps={steps}
                 onStepsChange={onStepsChange}
-                companyLogo={companyLogo}
                 companyName={companyName}
               />
             </div>
