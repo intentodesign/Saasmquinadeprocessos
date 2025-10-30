@@ -54,10 +54,10 @@ const STEP_STYLES = {
     color: '#22c55e'
   },
   subprocess: {
-    gradient: 'from-cyan-500 to-cyan-600',
+    gradient: 'from-blue-500 to-blue-600',
     icon: Settings,
-    shape: 'rectangle-double',
-    color: '#06b6d4'
+    shape: 'rectangle',
+    color: '#3b82f6'
   }
 };
 
@@ -81,8 +81,6 @@ function StepNodeV2({ data }: { data: any }) {
         return 'parallelogram-shape';
       case 'document':
         return 'document-shape';
-      case 'rectangle-double':
-        return 'rectangle-double-shape';
       default:
         return 'rounded-xl';
     }
@@ -125,13 +123,13 @@ function StepNodeV2({ data }: { data: any }) {
               </div>
             )}
 
-            {/* Rectangle Shape (Processo, Subprocesso) */}
-            {(config.shape === 'rectangle' || config.shape === 'rectangle-double') && (
+            {/* Rectangle Shape (Processo) */}
+            {config.shape === 'rectangle' && (
               <div
                 className={`
                   relative
                   px-6 py-3
-                  ${config.shape === 'rectangle-double' ? 'border-4 border-double' : 'border-2'}
+                  border-2
                   ${getShape()}
                   bg-gradient-to-br ${gradient}
                   shadow-lg border-white/30
@@ -354,12 +352,26 @@ export function DragDropFlowchartV2({ steps, onStepsChange, className = '', comp
       // Add edge to next step
       if (index < processSteps.length - 1) {
         const edgeColor = config.color;
+        const isDecision = stepType === 'decision';
+
         flowEdges.push({
           id: `e-step${index}-step${index + 1}`,
           source: `step-${index}`,
           target: `step-${index + 1}`,
           type: 'smoothstep',
           animated: true,
+          label: isDecision ? 'Sim' : undefined,
+          labelStyle: isDecision ? {
+            fill: '#ffffff',
+            fontWeight: 700,
+            fontSize: 12,
+          } : undefined,
+          labelBgStyle: isDecision ? {
+            fill: edgeColor,
+            fillOpacity: 0.95,
+          } : undefined,
+          labelBgPadding: [8, 4] as [number, number],
+          labelBgBorderRadius: 4,
           style: {
             stroke: edgeColor,
             strokeWidth: 2.5,

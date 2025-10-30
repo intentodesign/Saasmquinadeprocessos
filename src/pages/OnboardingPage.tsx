@@ -34,6 +34,12 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
       content: 'Olá! Eu sou o Rô Bot! 👋 Prazer em conhecer você! Estou aqui para te ajudar a criar processos incríveis para sua oficina. Antes de começarmos, preciso conhecer um pouquinho sobre você e sua empresa. Vamos lá?',
       timestamp: new Date(),
     },
+    {
+      id: '2',
+      sender: 'robot',
+      content: 'Primeiro, me conta: qual é o seu nome?',
+      timestamp: new Date(),
+    },
   ]);
   
   const [currentInput, setCurrentInput] = useState('');
@@ -117,15 +123,8 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         setStep(2);
         break;
 
-      case 2: // Pergunta sobre logo
-        if (input.toLowerCase().includes('sim') || input.toLowerCase().includes('quero') || input.toLowerCase().includes('gostaria')) {
-          await addRobotMessage('Perfeito! Use o botão abaixo para fazer o upload do seu logotipo.');
-          setStep(3);
-        } else {
-          await addRobotMessage('Sem problemas! Você pode adicionar depois se quiser. 👍');
-          await addRobotMessage('Agora vamos às cores! Você gostaria de personalizar as cores da sua marca nos processos?');
-          setStep(4);
-        }
+      case 2: // Resposta sobre logo (não precisa mais processar input)
+        // Esse case agora é tratado pelos botões
         break;
 
       case 3: // Upload do logo
@@ -169,6 +168,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   };
 
   const confirmColors = async () => {
+    setShowColorPicker(false);
     await addRobotMessage('Cores escolhidas! Ficou show! 🎨');
     await finishOnboarding();
   };
@@ -176,6 +176,32 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const skipColors = async () => {
     await addRobotMessage('Tudo bem! Vamos usar cores padrão que ficam lindas também! 🎨');
     setShowColorPicker(false);
+    await finishOnboarding();
+  };
+
+  const handleYesLogo = async () => {
+    addMessage('user', 'Sim, quero adicionar!');
+    await addRobotMessage('Perfeito! Use o botão abaixo para fazer o upload do seu logotipo.');
+    setStep(3);
+  };
+
+  const handleNoLogo = async () => {
+    addMessage('user', 'Não, vou pular essa etapa');
+    await addRobotMessage('Sem problemas! Você pode adicionar depois se quiser. 👍');
+    await addRobotMessage('Agora vamos às cores! Você gostaria de personalizar as cores da sua marca nos processos?');
+    setStep(4);
+  };
+
+  const handleYesColors = async () => {
+    addMessage('user', 'Sim, quero personalizar!');
+    await addRobotMessage('Ótimo! Você pode escolher as cores usando os seletores abaixo.');
+    setShowColorPicker(true);
+    setStep(5);
+  };
+
+  const handleNoColors = async () => {
+    addMessage('user', 'Não, usar padrão');
+    await addRobotMessage('Tudo bem! Vamos usar cores padrão que ficam lindas também! 🎨');
     await finishOnboarding();
   };
 
@@ -368,8 +394,8 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
-          {step < 3 && (
+          {/* Input Area - Nome e Empresa */}
+          {(step === 0 || step === 1) && (
             <form onSubmit={handleSubmit} className="p-4 bg-white border-t-2 border-gray-200">
               <div className="flex gap-2">
                 <Input
@@ -377,12 +403,11 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                   onChange={(e) => setCurrentInput(e.target.value)}
                   placeholder={
                     step === 0 ? 'Digite seu nome...' :
-                    step === 1 ? 'Digite o nome da sua empresa...' :
-                    step === 2 ? 'Digite "sim" ou "não"...' :
-                    'Digite sua resposta...'
+                    'Digite o nome da sua empresa...'
                   }
                   className="flex-1"
                   disabled={isTyping}
+                  autoFocus
                 />
                 <Button
                   type="submit"
@@ -395,25 +420,50 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
             </form>
           )}
 
-          {step === 4 && !showColorPicker && (
-            <form onSubmit={handleSubmit} className="p-4 bg-white border-t-2 border-gray-200">
-              <div className="flex gap-2">
-                <Input
-                  value={currentInput}
-                  onChange={(e) => setCurrentInput(e.target.value)}
-                  placeholder='Digite "sim" ou "não"...'
-                  className="flex-1"
-                  disabled={isTyping}
-                />
+          {/* Botões Sim/Não - Logo */}
+          {step === 2 && (
+            <div className="p-4 bg-white border-t-2 border-gray-200">
+              <div className="flex gap-3 justify-center">
                 <Button
-                  type="submit"
-                  disabled={!currentInput.trim() || isTyping}
-                  className="bg-blue-600 hover:bg-blue-700"
+                  onClick={handleYesLogo}
+                  disabled={isTyping}
+                  className="flex-1 max-w-xs bg-green-600 hover:bg-green-700 text-lg py-6"
                 >
-                  <Send className="w-4 h-4" />
+                  ✓ Sim, quero adicionar!
+                </Button>
+                <Button
+                  onClick={handleNoLogo}
+                  disabled={isTyping}
+                  variant="outline"
+                  className="flex-1 max-w-xs text-lg py-6"
+                >
+                  Pular esta etapa
                 </Button>
               </div>
-            </form>
+            </div>
+          )}
+
+          {/* Botões Sim/Não - Cores */}
+          {step === 4 && !showColorPicker && (
+            <div className="p-4 bg-white border-t-2 border-gray-200">
+              <div className="flex gap-3 justify-center">
+                <Button
+                  onClick={handleYesColors}
+                  disabled={isTyping}
+                  className="flex-1 max-w-xs bg-green-600 hover:bg-green-700 text-lg py-6"
+                >
+                  ✓ Sim, personalizar!
+                </Button>
+                <Button
+                  onClick={handleNoColors}
+                  disabled={isTyping}
+                  variant="outline"
+                  className="flex-1 max-w-xs text-lg py-6"
+                >
+                  Usar cores padrão
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

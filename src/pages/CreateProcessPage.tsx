@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { Bot, User, ArrowLeft, Loader2, Send } from 'lucide-react';
+import { Bot, User as UserIcon, ArrowLeft, Loader2, Send } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card } from '../components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { Process, ProcessStep } from '../lib/types';
+import { Process, ProcessStep, User, BrandingSettings } from '../lib/types';
 import { generateId } from '../lib/utils';
 
 interface CreateProcessPageProps {
+  user: User;
+  branding?: BrandingSettings;
   onNavigate: (path: string) => void;
   onCreateProcess: (process: Process) => void;
 }
@@ -21,7 +23,7 @@ type Message = {
 
 const N8N_WEBHOOK_URL = 'https://n8n.intentomarcas.com.br/webhook/process-chat';
 
-export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcessPageProps) {
+export function CreateProcessPage({ user, branding, onNavigate, onCreateProcess }: CreateProcessPageProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [currentInput, setCurrentInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +45,11 @@ export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcess
     const newSessionId = `session_${generateId()}`;
     setSessionId(newSessionId);
 
-    // Get initial greeting from N8N
+    // Add personalized greeting immediately
+    const companyName = branding?.companyName || user.company || 'sua empresa';
+    addBotMessage(`Olá, ${user.name}! 👋 Sou o Rô Bot, assistente da ${companyName}!`);
+
+    // Get initial instructions from N8N
     setTimeout(() => {
       sendMessageToN8N('__START__', newSessionId);
     }, 500);
@@ -85,6 +91,8 @@ export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcess
         body: JSON.stringify({
           message,
           sessionId: sid || sessionId,
+          userName: user.name,
+          companyName: branding?.companyName || user.company || 'sua empresa',
         }),
       });
 
@@ -227,7 +235,7 @@ export function CreateProcessPage({ onNavigate, onCreateProcess }: CreateProcess
               {message.type === 'user' && (
                 <Avatar className="h-10 w-10 flex-shrink-0">
                   <AvatarFallback className="bg-[#64748b] text-white">
-                    <User className="h-5 w-5" />
+                    <UserIcon className="h-5 w-5" />
                   </AvatarFallback>
                 </Avatar>
               )}

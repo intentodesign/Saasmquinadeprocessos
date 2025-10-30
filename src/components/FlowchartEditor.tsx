@@ -6,7 +6,8 @@ import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Textarea } from './ui/textarea';
-import { Code, Eye, Download, RefreshCw, Move } from 'lucide-react';
+import { Code, Eye, Download, RefreshCw, Move, Image } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 interface FlowchartEditorProps {
   steps: ProcessStep[];
@@ -184,6 +185,43 @@ export function FlowchartEditor({ steps, processName, onStepsChange, companyLogo
     setMermaidCode(generateMermaidCode());
   };
 
+  const handleExportPNG = async () => {
+    // Encontra o elemento do ReactFlow
+    const flowchartElement = document.querySelector('.react-flow') as HTMLElement;
+
+    if (!flowchartElement) {
+      alert('Erro: Fluxograma não encontrado. Certifique-se de estar na aba "Clique e Arraste".');
+      return;
+    }
+
+    try {
+      // Captura o canvas
+      const canvas = await html2canvas(flowchartElement, {
+        backgroundColor: '#f8fafc',
+        scale: 2, // Alta qualidade
+        logging: false,
+        useCORS: true,
+      });
+
+      // Converte para blob e faz download
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${processName.toLowerCase().replace(/\s+/g, '-')}-fluxograma.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao exportar PNG:', error);
+      alert('Erro ao exportar imagem. Tente novamente.');
+    }
+  };
+
   if (!mounted) {
     return (
       <Card className="p-6">
@@ -223,6 +261,15 @@ export function FlowchartEditor({ steps, processName, onStepsChange, companyLogo
             >
               <Download className="mr-2 h-4 w-4" />
               Exportar .mmd
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPNG}
+              disabled={viewMode !== 'interactive'}
+            >
+              <Image className="mr-2 h-4 w-4" />
+              Exportar PNG
             </Button>
           </div>
         </div>

@@ -36,7 +36,7 @@ const tourSteps: TourStep[] = [
     title: '📚 Seus Processos',
     description: 'Aqui você vê todos os processos criados. Você pode editá-los, visualizá-los como fluxograma e exportar em PDF.',
     target: '[data-tour="processes-section"]',
-    position: 'bottom',
+    position: 'top',
   },
   {
     id: 'sidebar',
@@ -149,7 +149,7 @@ export function TutorialTour({ onComplete, onSkip }: TutorialTourProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 z-[9998]"
+          className="fixed inset-0 bg-black/50 z-[99998]"
           onClick={handleSkip}
         />
       </AnimatePresence>
@@ -157,7 +157,7 @@ export function TutorialTour({ onComplete, onSkip }: TutorialTourProps) {
       {/* Highlight spotlight */}
       {highlightedElement && (
         <div
-          className="fixed z-[9999] pointer-events-none"
+          className="fixed z-[99999] pointer-events-none"
           style={{
             top: highlightedElement.getBoundingClientRect().top + window.pageYOffset,
             left: highlightedElement.getBoundingClientRect().left + window.pageXOffset,
@@ -184,7 +184,7 @@ export function TutorialTour({ onComplete, onSkip }: TutorialTourProps) {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: -20 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-          className={`fixed z-[10000] pointer-events-auto ${step.position === 'center' ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' : ''}`}
+          className={`fixed z-[100000] pointer-events-auto ${step.position === 'center' ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' : ''}`}
           style={
             step.position !== 'center'
               ? { top: tooltipPosition.top, left: tooltipPosition.left }

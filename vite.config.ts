@@ -54,6 +54,52 @@
     build: {
       target: 'esnext',
       outDir: 'build',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // React core
+            'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
+
+            // ReactFlow (grande lib de fluxograma)
+            'flow-vendor': ['reactflow'],
+
+            // Mermaid (diagramas)
+            'mermaid-vendor': ['mermaid'],
+
+            // Radix UI (muitos componentes)
+            'ui-vendor': [
+              '@radix-ui/react-accordion',
+              '@radix-ui/react-alert-dialog',
+              '@radix-ui/react-avatar',
+              '@radix-ui/react-checkbox',
+              '@radix-ui/react-dialog',
+              '@radix-ui/react-dropdown-menu',
+              '@radix-ui/react-label',
+              '@radix-ui/react-popover',
+              '@radix-ui/react-select',
+              '@radix-ui/react-tabs',
+              '@radix-ui/react-tooltip',
+              '@radix-ui/react-slot',
+            ],
+
+            // Framer Motion (animações)
+            'motion-vendor': ['framer-motion', 'motion'],
+
+            // PDF e Canvas
+            'pdf-vendor': ['jspdf', 'html2canvas'],
+
+            // Outras libs utilitárias
+            'utils-vendor': [
+              'lucide-react',
+              'sonner',
+              'class-variance-authority',
+              'clsx',
+              'tailwind-merge',
+              'react-hook-form',
+            ],
+          },
+        },
+      },
     },
     server: {
       port: 3000,

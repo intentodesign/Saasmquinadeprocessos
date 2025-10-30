@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ProcessStep } from '../lib/types';
+import { ProcessStep, StepType } from '../lib/types';
 import { Card } from './ui/card';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
-import { GripVertical, Edit, Trash, Copy, Plus } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { GripVertical, Edit, Trash, Copy, Plus, Settings, AlertTriangle, Database, FileText } from 'lucide-react';
 import { generateId } from '../lib/utils';
 
 interface ProcessStepsEditorProps {
@@ -65,17 +66,62 @@ export function ProcessStepsEditor({ steps, onStepsChange }: ProcessStepsEditorP
           {editingStepId === step.id ? (
             // Edit Mode
             <div className="space-y-4">
-              <Input
-                value={step.title}
-                onChange={(e) => updateStep(step.id, { title: e.target.value })}
-                placeholder="Título da etapa"
-              />
-              <Textarea
-                value={step.description}
-                onChange={(e) => updateStep(step.id, { description: e.target.value })}
-                placeholder="Descrição da etapa"
-                rows={3}
-              />
+              <div>
+                <Label>Título da Etapa</Label>
+                <Input
+                  value={step.title}
+                  onChange={(e) => updateStep(step.id, { title: e.target.value })}
+                  placeholder="Título da etapa"
+                />
+              </div>
+
+              <div>
+                <Label>Tipo de Etapa</Label>
+                <Select
+                  value={step.type || 'process'}
+                  onValueChange={(value: StepType) => updateStep(step.id, { type: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="process">
+                      <div className="flex items-center gap-2">
+                        <Settings className="h-4 w-4 text-blue-600" />
+                        <span>Processo</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="decision">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-orange-600" />
+                        <span>Decisão</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="io">
+                      <div className="flex items-center gap-2">
+                        <Database className="h-4 w-4 text-purple-600" />
+                        <span>Entrada/Saída</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="document">
+                      <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-green-600" />
+                        <span>Documento</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Descrição</Label>
+                <Textarea
+                  value={step.description}
+                  onChange={(e) => updateStep(step.id, { description: e.target.value })}
+                  placeholder="Descrição da etapa"
+                  rows={3}
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label>Responsável</Label>
@@ -120,10 +166,28 @@ export function ProcessStepsEditor({ steps, onStepsChange }: ProcessStepsEditorP
                 </div>
                 
                 <div className="flex-1 space-y-3">
-                  <h3 className="text-[#1e293b]">
-                    {index + 1}. {step.title}
-                  </h3>
-                  
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-[#1e293b]">
+                      {index + 1}. {step.title}
+                    </h3>
+                    {step.type && (
+                      <span className={`
+                        text-xs px-2 py-1 rounded-full font-medium
+                        ${step.type === 'process' ? 'bg-blue-100 text-blue-700' : ''}
+                        ${step.type === 'decision' ? 'bg-orange-100 text-orange-700' : ''}
+                        ${step.type === 'io' ? 'bg-purple-100 text-purple-700' : ''}
+                        ${step.type === 'document' ? 'bg-green-100 text-green-700' : ''}
+                        ${step.type === 'subprocess' ? 'bg-cyan-100 text-cyan-700' : ''}
+                      `}>
+                        {step.type === 'process' && 'Processo'}
+                        {step.type === 'decision' && 'Decisão'}
+                        {step.type === 'io' && 'Entrada/Saída'}
+                        {step.type === 'document' && 'Documento'}
+                        {step.type === 'subprocess' && 'Subprocesso'}
+                      </span>
+                    )}
+                  </div>
+
                   <p className="text-[#64748b]">{step.description}</p>
                   
                   <div className="flex flex-wrap gap-4 text-sm">

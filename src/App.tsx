@@ -284,6 +284,8 @@ export default function App() {
     if (currentRoute === '/process/new') {
       return requireAuth(
         <CreateProcessPage
+          user={user!}
+          branding={branding || undefined}
           onNavigate={navigate}
           onCreateProcess={handleCreateProcess}
         />
