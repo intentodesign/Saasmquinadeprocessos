@@ -186,8 +186,8 @@ export function FlowchartEditor({ steps, processName, onStepsChange, companyLogo
   };
 
   const handleExportPNG = async () => {
-    // Encontra o elemento do ReactFlow
-    const flowchartElement = document.querySelector('.react-flow') as HTMLElement;
+    // Encontra o elemento do ReactFlow (V3 tem classe flowchart-container-v3)
+    const flowchartElement = document.querySelector('.flowchart-container-v3 .react-flow') as HTMLElement;
 
     if (!flowchartElement) {
       alert('Erro: Fluxograma não encontrado. Certifique-se de estar na aba "Clique e Arraste".');
@@ -197,10 +197,11 @@ export function FlowchartEditor({ steps, processName, onStepsChange, companyLogo
     try {
       // Captura o canvas
       const canvas = await html2canvas(flowchartElement, {
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#ffffff',
         scale: 2, // Alta qualidade
         logging: false,
         useCORS: true,
+        allowTaint: true,
       });
 
       // Converte para blob e faz download

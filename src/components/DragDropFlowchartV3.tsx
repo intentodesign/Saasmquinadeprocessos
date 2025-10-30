@@ -34,7 +34,8 @@ import {
   RotateCcw,
   RotateCw,
   X,
-  Save
+  Save,
+  Wand2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -390,11 +391,13 @@ export function DragDropFlowchartV3({
     setNodes(newNodes);
     setEdges(newEdges);
 
-    // Salvar estado inicial no histórico
-    if (history.length === 0) {
-      saveToHistory(newNodes, newEdges);
+    // Salvar estado inicial no histórico apenas uma vez
+    if (history.length === 0 && newNodes.length > 0) {
+      setTimeout(() => {
+        saveToHistory(newNodes, newEdges);
+      }, 100);
     }
-  }, [steps, convertStepsToFlow, setNodes, setEdges]);
+  }, [steps, convertStepsToFlow, setNodes, setEdges, history.length, saveToHistory]);
 
   // Callback para seleção de nó
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
@@ -462,17 +465,30 @@ export function DragDropFlowchartV3({
   // Callback para criar conexão
   const onConnect = useCallback(
     (params: Connection) => {
+      // Determinar cor baseado no nó de origem
+      const sourceNode = nodes.find(n => n.id === params.source);
+      let edgeColor = COLORS.process;
+
+      if (sourceNode) {
+        if (sourceNode.data.isStartEnd) {
+          edgeColor = sourceNode.data.label === 'Início' ? COLORS.start : COLORS.end;
+        } else {
+          const stepType = sourceNode.data.stepType || 'process';
+          edgeColor = STEP_CONFIG[stepType]?.color || COLORS.process;
+        }
+      }
+
       const newEdge = {
         ...params,
         type: 'smoothstep',
         animated: true,
         style: {
-          stroke: COLORS.process,
+          stroke: edgeColor,
           strokeWidth: 2,
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: COLORS.process,
+          color: edgeColor,
           width: 20,
           height: 20,
         },
@@ -483,6 +499,33 @@ export function DragDropFlowchartV3({
       saveToHistory(nodes, newEdges);
     },
     [edges, nodes, setEdges, saveToHistory]
+  );
+
+  // Callback para mudanças de edges (incluindo deleção)
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      onEdgesChange(changes);
+
+      // Salvar no histórico após mudança
+      const hasRemove = changes.some(c => c.type === 'remove');
+      if (hasRemove) {
+        setTimeout(() => {
+          setEdges(currentEdges => {
+            saveToHistory(nodes, currentEdges);
+            return currentEdges;
+          });
+        }, 0);
+      }
+    },
+    [onEdgesChange, nodes, saveToHistory, setEdges]
+  );
+
+  // Callback para mudanças de nodes
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      onNodesChange(changes);
+    },
+    [onNodesChange]
   );
 
   // Remover etapa selecionada
@@ -506,13 +549,46 @@ export function DragDropFlowchartV3({
     }
   }, [selectedNode, nodes, edges, steps, setNodes, setEdges, saveToHistory, onStepsChange]);
 
+  // Reorganizar automaticamente o fluxograma
+  const handleAutoLayout = useCallback(() => {
+    const ySpacing = 200;
+    const xCenter = 400;
+    let yPosition = 100;
+
+    const updatedNodes = nodes.map(node => {
+      const newNode = {
+        ...node,
+        position: { x: xCenter, y: yPosition },
+      };
+      yPosition += ySpacing;
+      return newNode;
+    });
+
+    setNodes(updatedNodes);
+    saveToHistory(updatedNodes, edges);
+  }, [nodes, edges, setNodes, saveToHistory]);
+
+  // Detectar tecla Delete para remover edges/nodes
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        if (selectedNode && selectedNode !== 'start' && selectedNode !== 'end') {
+          handleDeleteNode();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNode, handleDeleteNode]);
+
   return (
-    <div className={`${className} relative bg-white`} style={{ height: '700px', width: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
+    <div className={`${className} relative bg-white flowchart-container-v3`} style={{ height: '700px', width: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         nodeTypes={nodeTypes}
@@ -525,6 +601,7 @@ export function DragDropFlowchartV3({
         elementsSelectable={true}
         snapToGrid={true}
         snapGrid={[15, 15]}
+        deleteKeyCode={['Delete', 'Backspace']}
       >
         {/* Grid sutil */}
         <Background
@@ -560,9 +637,17 @@ export function DragDropFlowchartV3({
           </Panel>
         )}
 
-        {/* Ações (Undo/Redo/Delete) */}
+        {/* Ações (Undo/Redo/Delete/Reorganizar) */}
         <Panel position="top-right" className="m-4">
           <div className="flex gap-2">
+            <button
+              onClick={handleAutoLayout}
+              className="p-2 bg-blue-50 rounded-lg shadow-sm border border-blue-200 hover:bg-blue-100 transition-all"
+              title="Reorganizar automaticamente"
+            >
+              <Wand2 className="h-4 w-4 text-blue-600" />
+            </button>
+
             <button
               onClick={handleUndo}
               disabled={historyIndex <= 0}
@@ -585,7 +670,7 @@ export function DragDropFlowchartV3({
               <button
                 onClick={handleDeleteNode}
                 className="p-2 bg-red-50 rounded-lg shadow-sm border border-red-200 hover:bg-red-100 transition-all"
-                title="Remover etapa selecionada"
+                title="Remover etapa selecionada (Delete)"
               >
                 <Trash2 className="h-4 w-4 text-red-600" />
               </button>
@@ -622,9 +707,9 @@ export function DragDropFlowchartV3({
         </Panel>
 
         {/* Instruções */}
-        <Panel position="bottom-left" className="m-4">
+        <Panel position="bottom-left" className="m-4" style={{ zIndex: 4 }}>
           <div className="bg-blue-50 px-3 py-2 rounded-lg text-xs text-blue-700 max-w-xs border border-blue-200">
-            💡 <strong>Dica:</strong> Arraste etapas para reposicionar. Clique em uma etapa para editar. Arraste das bolinhas para conectar.
+            💡 <strong>Dica:</strong> Arraste etapas para reposicionar. Clique para editar. Arraste das bolinhas para conectar. Delete/Backspace para remover conexões.
           </div>
         </Panel>
       </ReactFlow>
