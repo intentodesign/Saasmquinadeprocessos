@@ -518,11 +518,13 @@ export function DragDropFlowchartV3({
     yPosition += stepSpacing;
 
     // Adicionar etapas (ordenadas + órfãs)
-    allStepsInOrder.forEach((step, index) => {
+    // IMPORTANTE: Usar índice original do step no array processSteps para manter ID consistente
+    allStepsInOrder.forEach((step) => {
       const stepType = step.type || 'process';
+      const originalIndex = processSteps.indexOf(step); // Índice original no array de entrada
 
       flowNodes.push({
-        id: `step-${index}`,
+        id: `step-${originalIndex}`,
         type: 'flowNode',
         position: { x: xCenter, y: yPosition },
         data: {
@@ -532,8 +534,8 @@ export function DragDropFlowchartV3({
           duration: step.duration,
           warning: step.warning,
           stepType: stepType,
-          stepIndex: index,
-          nodeId: `step-${index}`,
+          stepIndex: originalIndex,
+          nodeId: `step-${originalIndex}`,
         },
       });
 
