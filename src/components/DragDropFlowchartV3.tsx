@@ -104,8 +104,14 @@ function FlowNode({ data, selected, id }: { data: any; selected: boolean; id: st
   const borderWidth = selected ? 3 : 1.5;
 
   const handleDelete = useCallback(() => {
-    setNodes((nds) => nds.filter((n) => n.id !== id));
-    setEdges((eds) => eds.filter((e) => e.source !== id && e.target !== id));
+    // Usar applyChanges para manter histórico de undo
+    setNodes((nds) => applyNodeChanges([{ type: 'remove', id }], nds));
+    setEdges((eds) => applyEdgeChanges(
+      eds
+        .filter((e) => e.source === id || e.target === id)
+        .map((e) => ({ type: 'remove' as const, id: e.id })),
+      eds
+    ));
   }, [id, setNodes, setEdges]);
 
   // Renderiza forma baseada no tipo
@@ -263,7 +269,8 @@ function CustomEdge({
   const [tempLabel, setTempLabel] = useState(label);
 
   const handleDelete = () => {
-    setEdges((edges) => edges.filter((edge) => edge.id !== id));
+    // Usar applyEdgeChanges para manter histórico de undo
+    setEdges((edges) => applyEdgeChanges([{ type: 'remove', id }], edges));
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -669,7 +676,7 @@ export function DragDropFlowchartV3({
       graph[edge.source].push(edge.target);
     });
 
-    // Percorrer o grafo a partir do "start" usando BFS
+    // Percorrer o grafo a partir do "start" usando BFS para encontrar steps conectados
     const visited = new Set<string>();
     const orderedStepIds: string[] = [];
     const queue = ['start'];
@@ -693,21 +700,38 @@ export function DragDropFlowchartV3({
       });
     }
 
-    // Mapear IDs para índices das etapas originais
-    const newSteps = orderedStepIds
-      .map(nodeId => {
-        const index = parseInt(nodeId.replace('step-', ''));
-        return steps[index];
-      })
-      .filter(step => step !== undefined)
-      .map((step, newIndex) => ({
-        ...step,
-        order: newIndex + 1,
-      }));
+    // Criar set de IDs conectados para lookup rápido
+    const connectedIdsSet = new Set(orderedStepIds);
 
-    // Atualizar apenas se a ordem mudou
-    if (newSteps.length !== steps.length ||
-        newSteps.some((s, i) => s.id !== steps[i]?.id)) {
+    // Atualizar TODOS os steps:
+    // - Conectados: recebem order sequencial (1, 2, 3...)
+    // - Órfãos: order = null (não aparecem na lista de cards)
+    const newSteps = steps.map((step, index) => {
+      const nodeId = `step-${index}`;
+      const connectedIndex = orderedStepIds.indexOf(nodeId);
+
+      if (connectedIndex !== -1) {
+        // Step conectado - ordem baseada em BFS
+        return {
+          ...step,
+          order: connectedIndex + 1,
+        };
+      } else {
+        // Step órfão - sem order (não aparece na lista de cards, mas fica no fluxograma)
+        return {
+          ...step,
+          order: undefined,
+        };
+      }
+    });
+
+    // Atualizar apenas se algo mudou
+    const hasChanges = newSteps.some((newStep, i) => {
+      const oldStep = steps[i];
+      return newStep.order !== oldStep.order;
+    });
+
+    if (hasChanges) {
       onStepsChange(newSteps);
     }
   }, [steps, onStepsChange]);
@@ -787,12 +811,26 @@ export function DragDropFlowchartV3({
   const handleDeleteNode = useCallback(() => {
     if (!selectedNode || selectedNode === 'start' || selectedNode === 'end') return;
 
-    const updatedNodes = nodes.filter(n => n.id !== selectedNode);
-    const updatedEdges = edges.filter(e => e.source !== selectedNode && e.target !== selectedNode);
+    // Usar applyChanges para manter histórico de undo do ReactFlow
+    setNodes((nds) => {
+      const updatedNodes = applyNodeChanges([{ type: 'remove', id: selectedNode }], nds);
+      return updatedNodes;
+    });
 
-    setNodes(updatedNodes);
-    setEdges(updatedEdges);
-    saveToHistory(updatedNodes, updatedEdges);
+    setEdges((eds) => {
+      const edgesToRemove = eds
+        .filter((e) => e.source === selectedNode || e.target === selectedNode)
+        .map((e) => ({ type: 'remove' as const, id: e.id }));
+      const updatedEdges = applyEdgeChanges(edgesToRemove, eds);
+
+      // Salvar no histórico customizado após aplicar mudanças
+      setTimeout(() => {
+        saveToHistory(nodes.filter(n => n.id !== selectedNode), updatedEdges);
+      }, 0);
+
+      return updatedEdges;
+    });
+
     setSelectedNode(null);
     setEditPanelOpen(false);
 

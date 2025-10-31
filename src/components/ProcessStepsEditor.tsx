@@ -168,7 +168,12 @@ function SortableStepCard({
         // View Mode
         <div>
           <div className="flex items-start gap-3">
-            <div className="flex flex-col gap-2 pt-1" {...attributes} {...listeners}>
+            <div
+              className="flex flex-col gap-2 pt-1"
+              style={{ touchAction: 'none' }}
+              {...attributes}
+              {...listeners}
+            >
               <GripVertical className="h-5 w-5 text-[#64748b] cursor-grab active:cursor-grabbing" />
             </div>
 
@@ -257,8 +262,18 @@ function SortableStepCard({
 export function ProcessStepsEditor({ steps, onStepsChange }: ProcessStepsEditorProps) {
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
 
+  // Filtrar apenas steps conectados (com order definido)
+  // Steps órfãos (order === undefined) não aparecem na lista
+  const orderedSteps = steps
+    .filter(step => step.order !== undefined && step.order !== null)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // precisa mover 8px antes de iniciar drag
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -268,15 +283,20 @@ export function ProcessStepsEditor({ steps, onStepsChange }: ProcessStepsEditorP
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = steps.findIndex((s) => s.id === active.id);
-      const newIndex = steps.findIndex((s) => s.id === over.id);
+      const oldIndex = orderedSteps.findIndex((s) => s.id === active.id);
+      const newIndex = orderedSteps.findIndex((s) => s.id === over.id);
 
-      const reorderedSteps = arrayMove(steps, oldIndex, newIndex).map((step, index) => ({
+      // Reordenar apenas os steps ordenados
+      const reorderedOrderedSteps = arrayMove(orderedSteps, oldIndex, newIndex).map((step, index) => ({
         ...step,
         order: index + 1,
       }));
 
-      onStepsChange(reorderedSteps);
+      // Mesclar de volta com steps órfãos (que mantêm order = undefined)
+      const orphanSteps = steps.filter(s => s.order === undefined || s.order === null);
+      const allSteps = [...reorderedOrderedSteps, ...orphanSteps];
+
+      onStepsChange(allSteps);
     }
   };
 
@@ -306,7 +326,7 @@ export function ProcessStepsEditor({ steps, onStepsChange }: ProcessStepsEditorP
         ...stepToDuplicate,
         id: generateId(),
         title: `${stepToDuplicate.title} (cópia)`,
-        order: steps.length + 1,
+        order: orderedSteps.length + 1,
       };
       onStepsChange([...steps, newStep]);
     }
@@ -317,7 +337,7 @@ export function ProcessStepsEditor({ steps, onStepsChange }: ProcessStepsEditorP
       id: generateId(),
       title: 'Nova Etapa',
       description: 'Descrição da etapa...',
-      order: steps.length + 1,
+      order: orderedSteps.length + 1,
     };
     onStepsChange([...steps, newStep]);
   };
@@ -330,10 +350,10 @@ export function ProcessStepsEditor({ steps, onStepsChange }: ProcessStepsEditorP
     >
       <div className="space-y-4">
         <SortableContext
-          items={steps.map(s => s.id)}
+          items={orderedSteps.map(s => s.id)}
           strategy={verticalListSortingStrategy}
         >
-          {steps.map((step, index) => (
+          {orderedSteps.map((step, index) => (
             <SortableStepCard
               key={step.id}
               step={step}
