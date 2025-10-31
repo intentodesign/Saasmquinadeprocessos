@@ -492,15 +492,8 @@ export function DragDropFlowchartV3({
     const stepSpacing = 200;
     const xCenter = 400;
 
-    // Separar steps conectados (com order) e órfãos (sem order)
-    const orderedSteps = processSteps
-      .filter(s => s.order !== undefined && s.order !== null)
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-    const orphanSteps = processSteps.filter(s => s.order === undefined || s.order === null);
-
-    // Todos os steps na ordem: ordenados primeiro, órfãos depois
-    const allStepsInOrder = [...orderedSteps, ...orphanSteps];
+    // NÃO reordenar steps - manter ordem original do array para não bagunçar posições
+    // Apenas verificar quais têm order (conectados) vs sem order (órfãos)
 
     // Nó de início
     flowNodes.push({
@@ -517,25 +510,29 @@ export function DragDropFlowchartV3({
 
     yPosition += stepSpacing;
 
-    // Adicionar etapas (ordenadas + órfãs)
-    // IMPORTANTE: Usar índice original do step no array processSteps para manter ID consistente
-    allStepsInOrder.forEach((step) => {
+    // Adicionar etapas mantendo ordem original do array (não reorganizar)
+    processSteps.forEach((step, index) => {
       const stepType = step.type || 'process';
-      const originalIndex = processSteps.indexOf(step); // Índice original no array de entrada
+
+      // Label mostra order (se conectado) ou sem número (se órfão)
+      const displayLabel = step.order !== undefined && step.order !== null
+        ? `${step.order}. ${step.title}`
+        : step.title; // Órfão sem número
 
       flowNodes.push({
-        id: `step-${originalIndex}`,
+        id: `step-${index}`,
         type: 'flowNode',
         position: { x: xCenter, y: yPosition },
         data: {
-          label: step.title,
+          label: displayLabel,
           description: step.description,
           responsible: step.responsible,
           duration: step.duration,
           warning: step.warning,
           stepType: stepType,
-          stepIndex: originalIndex,
-          nodeId: `step-${originalIndex}`,
+          stepIndex: index,
+          nodeId: `step-${index}`,
+          isOrphan: step.order === undefined || step.order === null, // Flag para estilo
         },
       });
 
@@ -559,39 +556,43 @@ export function DragDropFlowchartV3({
     // start → primeiro step ordenado → ... → último step ordenado → end
     // Steps órfãos ficam soltos sem conexões automáticas
 
-    if (orderedSteps.length > 0) {
-      // start → primeiro step ordenado
-      const firstStepIndex = allStepsInOrder.findIndex(s => s.id === orderedSteps[0].id);
-      const firstStepNode = flowNodes.find(n => n.id === `step-${firstStepIndex}`);
+    // Pegar steps conectados (com order) e ordenar
+    const connectedSteps = processSteps
+      .filter(s => s.order !== undefined && s.order !== null)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
 
-      if (firstStepNode) {
-        flowEdges.push({
-          id: `e-start-${firstStepNode.id}`,
-          source: 'start',
-          target: firstStepNode.id,
-          type: 'custom',
-          animated: true,
-          data: { label: '' },
-          style: {
-            stroke: COLORS.start,
-            strokeWidth: 2,
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: COLORS.start,
-            width: 20,
-            height: 20,
-          },
-        });
-      }
+    if (connectedSteps.length > 0) {
+      // start → primeiro step ordenado
+      const firstStep = connectedSteps[0];
+      const firstStepIndex = processSteps.indexOf(firstStep);
+      const firstStepNodeId = `step-${firstStepIndex}`;
+
+      flowEdges.push({
+        id: `e-start-${firstStepNodeId}`,
+        source: 'start',
+        target: firstStepNodeId,
+        type: 'custom',
+        animated: true,
+        data: { label: '' },
+        style: {
+          stroke: COLORS.start,
+          strokeWidth: 2,
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: COLORS.start,
+          width: 20,
+          height: 20,
+        },
+      });
 
       // Conectar steps ordenados sequencialmente
-      for (let i = 0; i < orderedSteps.length - 1; i++) {
-        const currentStep = orderedSteps[i];
-        const nextStep = orderedSteps[i + 1];
+      for (let i = 0; i < connectedSteps.length - 1; i++) {
+        const currentStep = connectedSteps[i];
+        const nextStep = connectedSteps[i + 1];
 
-        const currentIndex = allStepsInOrder.findIndex(s => s.id === currentStep.id);
-        const nextIndex = allStepsInOrder.findIndex(s => s.id === nextStep.id);
+        const currentIndex = processSteps.indexOf(currentStep);
+        const nextIndex = processSteps.indexOf(nextStep);
 
         const sourceNodeId = `step-${currentIndex}`;
         const targetNodeId = `step-${nextIndex}`;
@@ -620,33 +621,31 @@ export function DragDropFlowchartV3({
       }
 
       // último step ordenado → end
-      const lastStep = orderedSteps[orderedSteps.length - 1];
-      const lastStepIndex = allStepsInOrder.findIndex(s => s.id === lastStep.id);
-      const lastStepNode = flowNodes.find(n => n.id === `step-${lastStepIndex}`);
+      const lastStep = connectedSteps[connectedSteps.length - 1];
+      const lastStepIndex = processSteps.indexOf(lastStep);
+      const lastStepNodeId = `step-${lastStepIndex}`;
 
-      if (lastStepNode) {
-        const lastStepType = lastStep.type || 'process';
-        const color = STEP_CONFIG[lastStepType]?.color || COLORS.process;
+      const lastStepType = lastStep.type || 'process';
+      const color = STEP_CONFIG[lastStepType]?.color || COLORS.process;
 
-        flowEdges.push({
-          id: `e-${lastStepNode.id}-end`,
-          source: lastStepNode.id,
-          target: 'end',
-          type: 'custom',
-          animated: true,
-          data: { label: '' },
-          style: {
-            stroke: color,
-            strokeWidth: 2,
-          },
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            color: COLORS.end,
-            width: 20,
-            height: 20,
-          },
-        });
-      }
+      flowEdges.push({
+        id: `e-${lastStepNodeId}-end`,
+        source: lastStepNodeId,
+        target: 'end',
+        type: 'custom',
+        animated: true,
+        data: { label: '' },
+        style: {
+          stroke: color,
+          strokeWidth: 2,
+        },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: COLORS.end,
+          width: 20,
+          height: 20,
+        },
+      });
     }
 
     return { nodes: flowNodes, edges: flowEdges };
