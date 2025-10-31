@@ -29,6 +29,7 @@ import { CSS } from '@dnd-kit/utilities';
 interface ProcessStepsEditorProps {
   steps: ProcessStep[];
   onStepsChange: (steps: ProcessStep[]) => void;
+  onSyncEdges?: (orderedSteps: ProcessStep[]) => void;
 }
 
 // Componente sortable para cada card
@@ -259,7 +260,7 @@ function SortableStepCard({
   );
 }
 
-export function ProcessStepsEditor({ steps, onStepsChange }: ProcessStepsEditorProps) {
+export function ProcessStepsEditor({ steps, onStepsChange, onSyncEdges }: ProcessStepsEditorProps) {
   const [editingStepId, setEditingStepId] = useState<string | null>(null);
 
   // Filtrar apenas steps conectados (com order definido)
@@ -297,6 +298,11 @@ export function ProcessStepsEditor({ steps, onStepsChange }: ProcessStepsEditorP
       const allSteps = [...reorderedOrderedSteps, ...orphanSteps];
 
       onStepsChange(allSteps);
+
+      // Sincronizar edges do fluxograma com a nova ordem
+      if (onSyncEdges) {
+        onSyncEdges(reorderedOrderedSteps);
+      }
     }
   };
 

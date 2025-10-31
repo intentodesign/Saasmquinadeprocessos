@@ -492,6 +492,16 @@ export function DragDropFlowchartV3({
     const stepSpacing = 200;
     const xCenter = 400;
 
+    // Separar steps conectados (com order) e órfãos (sem order)
+    const orderedSteps = processSteps
+      .filter(s => s.order !== undefined && s.order !== null)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    const orphanSteps = processSteps.filter(s => s.order === undefined || s.order === null);
+
+    // Todos os steps na ordem: ordenados primeiro, órfãos depois
+    const allStepsInOrder = [...orderedSteps, ...orphanSteps];
+
     // Nó de início
     flowNodes.push({
       id: 'start',
@@ -507,8 +517,8 @@ export function DragDropFlowchartV3({
 
     yPosition += stepSpacing;
 
-    // Adicionar etapas
-    processSteps.forEach((step, index) => {
+    // Adicionar etapas (ordenadas + órfãs)
+    allStepsInOrder.forEach((step, index) => {
       const stepType = step.type || 'process';
 
       flowNodes.push({
@@ -543,31 +553,98 @@ export function DragDropFlowchartV3({
       },
     });
 
-    // Criar conexões lineares iniciais
-    for (let i = 0; i < flowNodes.length - 1; i++) {
-      const sourceNode = flowNodes[i];
-      const targetNode = flowNodes[i + 1];
-      const sourceType = sourceNode.data.stepType || 'process';
-      const color = sourceNode.data.isStartEnd ? COLORS.start : STEP_CONFIG[sourceType]?.color || COLORS.process;
+    // Criar conexões lineares apenas para steps ordenados
+    // start → primeiro step ordenado → ... → último step ordenado → end
+    // Steps órfãos ficam soltos sem conexões automáticas
 
-      flowEdges.push({
-        id: `e-${sourceNode.id}-${targetNode.id}`,
-        source: sourceNode.id,
-        target: targetNode.id,
-        type: 'custom',
-        animated: true,
-        data: { label: '' },
-        style: {
-          stroke: color,
-          strokeWidth: 2,
-        },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: color,
-          width: 20,
-          height: 20,
-        },
-      });
+    if (orderedSteps.length > 0) {
+      // start → primeiro step ordenado
+      const firstStepIndex = allStepsInOrder.findIndex(s => s.id === orderedSteps[0].id);
+      const firstStepNode = flowNodes.find(n => n.id === `step-${firstStepIndex}`);
+
+      if (firstStepNode) {
+        flowEdges.push({
+          id: `e-start-${firstStepNode.id}`,
+          source: 'start',
+          target: firstStepNode.id,
+          type: 'custom',
+          animated: true,
+          data: { label: '' },
+          style: {
+            stroke: COLORS.start,
+            strokeWidth: 2,
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: COLORS.start,
+            width: 20,
+            height: 20,
+          },
+        });
+      }
+
+      // Conectar steps ordenados sequencialmente
+      for (let i = 0; i < orderedSteps.length - 1; i++) {
+        const currentStep = orderedSteps[i];
+        const nextStep = orderedSteps[i + 1];
+
+        const currentIndex = allStepsInOrder.findIndex(s => s.id === currentStep.id);
+        const nextIndex = allStepsInOrder.findIndex(s => s.id === nextStep.id);
+
+        const sourceNodeId = `step-${currentIndex}`;
+        const targetNodeId = `step-${nextIndex}`;
+
+        const sourceType = currentStep.type || 'process';
+        const color = STEP_CONFIG[sourceType]?.color || COLORS.process;
+
+        flowEdges.push({
+          id: `e-${sourceNodeId}-${targetNodeId}`,
+          source: sourceNodeId,
+          target: targetNodeId,
+          type: 'custom',
+          animated: true,
+          data: { label: '' },
+          style: {
+            stroke: color,
+            strokeWidth: 2,
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: color,
+            width: 20,
+            height: 20,
+          },
+        });
+      }
+
+      // último step ordenado → end
+      const lastStep = orderedSteps[orderedSteps.length - 1];
+      const lastStepIndex = allStepsInOrder.findIndex(s => s.id === lastStep.id);
+      const lastStepNode = flowNodes.find(n => n.id === `step-${lastStepIndex}`);
+
+      if (lastStepNode) {
+        const lastStepType = lastStep.type || 'process';
+        const color = STEP_CONFIG[lastStepType]?.color || COLORS.process;
+
+        flowEdges.push({
+          id: `e-${lastStepNode.id}-end`,
+          source: lastStepNode.id,
+          target: 'end',
+          type: 'custom',
+          animated: true,
+          data: { label: '' },
+          style: {
+            stroke: color,
+            strokeWidth: 2,
+          },
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            color: COLORS.end,
+            width: 20,
+            height: 20,
+          },
+        });
+      }
     }
 
     return { nodes: flowNodes, edges: flowEdges };
@@ -700,21 +777,32 @@ export function DragDropFlowchartV3({
       });
     }
 
-    // Criar set de IDs conectados para lookup rápido
-    const connectedIdsSet = new Set(orderedStepIds);
+    // Mapear orderedStepIds para os steps reais
+    // orderedStepIds contém node IDs como 'step-0', 'step-2' (índices dos steps no array)
+    const orderedSteps = orderedStepIds
+      .map(nodeId => {
+        const index = parseInt(nodeId.replace('step-', ''));
+        return steps[index];
+      })
+      .filter(step => step !== undefined);
+
+    // Criar mapa de step.id para nova order
+    const orderMap = new Map<string, number>();
+    orderedSteps.forEach((step, idx) => {
+      orderMap.set(step.id, idx + 1);
+    });
 
     // Atualizar TODOS os steps:
     // - Conectados: recebem order sequencial (1, 2, 3...)
-    // - Órfãos: order = null (não aparecem na lista de cards)
-    const newSteps = steps.map((step, index) => {
-      const nodeId = `step-${index}`;
-      const connectedIndex = orderedStepIds.indexOf(nodeId);
+    // - Órfãos: order = undefined (não aparecem na lista de cards)
+    const newSteps = steps.map(step => {
+      const newOrder = orderMap.get(step.id);
 
-      if (connectedIndex !== -1) {
+      if (newOrder !== undefined) {
         // Step conectado - ordem baseada em BFS
         return {
           ...step,
-          order: connectedIndex + 1,
+          order: newOrder,
         };
       } else {
         // Step órfão - sem order (não aparece na lista de cards, mas fica no fluxograma)

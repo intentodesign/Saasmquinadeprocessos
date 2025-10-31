@@ -158,9 +158,9 @@ export function ProcessEditorPage({ process, onNavigate, onUpdateProcess }: Proc
             </div>
           ) : (
             // Diagram View
-            <div className="max-w-5xl mx-auto space-y-4">
-              <FlowchartEditor 
-                steps={editedProcess.steps} 
+            <div className="w-full space-y-4">
+              <FlowchartEditor
+                steps={editedProcess.steps}
                 processName={editedProcess.name}
                 onStepsChange={handleStepsChange}
                 companyLogo={branding.logoUrl}
