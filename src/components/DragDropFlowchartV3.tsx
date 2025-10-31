@@ -658,6 +658,60 @@ export function DragDropFlowchartV3({
     setEditPanelOpen(false);
   }, [editData, nodes, edges, steps, setNodes, saveToHistory, onStepsChange]);
 
+  // Recalcular ordem das etapas baseado no grafo de conexões
+  const recalculateStepOrder = useCallback((currentNodes: Node[], currentEdges: Edge[]) => {
+    if (!onStepsChange) return;
+
+    // Construir mapa de adjacências (grafo)
+    const graph: Record<string, string[]> = {};
+    currentEdges.forEach(edge => {
+      if (!graph[edge.source]) graph[edge.source] = [];
+      graph[edge.source].push(edge.target);
+    });
+
+    // Percorrer o grafo a partir do "start" usando BFS
+    const visited = new Set<string>();
+    const orderedStepIds: string[] = [];
+    const queue = ['start'];
+
+    while (queue.length > 0) {
+      const nodeId = queue.shift()!;
+      if (visited.has(nodeId)) continue;
+      visited.add(nodeId);
+
+      // Se for uma etapa (não start/end), adicionar na lista ordenada
+      if (nodeId.startsWith('step-')) {
+        orderedStepIds.push(nodeId);
+      }
+
+      // Adicionar filhos na fila
+      const children = graph[nodeId] || [];
+      children.forEach(childId => {
+        if (!visited.has(childId)) {
+          queue.push(childId);
+        }
+      });
+    }
+
+    // Mapear IDs para índices das etapas originais
+    const newSteps = orderedStepIds
+      .map(nodeId => {
+        const index = parseInt(nodeId.replace('step-', ''));
+        return steps[index];
+      })
+      .filter(step => step !== undefined)
+      .map((step, newIndex) => ({
+        ...step,
+        order: newIndex + 1,
+      }));
+
+    // Atualizar apenas se a ordem mudou
+    if (newSteps.length !== steps.length ||
+        newSteps.some((s, i) => s.id !== steps[i]?.id)) {
+      onStepsChange(newSteps);
+    }
+  }, [steps, onStepsChange]);
+
   // Callback para criar conexão
   const onConnect = useCallback(
     (params: Connection) => {
@@ -694,8 +748,11 @@ export function DragDropFlowchartV3({
       const newEdges = addEdge(newEdge, edges);
       setEdges(newEdges);
       saveToHistory(nodes, newEdges);
+
+      // Recalcular ordem das etapas
+      setTimeout(() => recalculateStepOrder(nodes, newEdges), 100);
     },
-    [edges, nodes, setEdges, saveToHistory]
+    [edges, nodes, setEdges, saveToHistory, recalculateStepOrder]
   );
 
   // Callback para mudanças de edges (incluindo deleção)
@@ -703,18 +760,19 @@ export function DragDropFlowchartV3({
     (changes: EdgeChange[]) => {
       onEdgesChange(changes);
 
-      // Salvar no histórico após mudança
+      // Salvar no histórico e recalcular ordem após mudança
       const hasRemove = changes.some(c => c.type === 'remove');
       if (hasRemove) {
         setTimeout(() => {
           setEdges(currentEdges => {
             saveToHistory(nodes, currentEdges);
+            recalculateStepOrder(nodes, currentEdges);
             return currentEdges;
           });
         }, 0);
       }
     },
-    [onEdgesChange, nodes, saveToHistory, setEdges]
+    [onEdgesChange, nodes, saveToHistory, setEdges, recalculateStepOrder]
   );
 
   // Callback para mudanças de nodes
